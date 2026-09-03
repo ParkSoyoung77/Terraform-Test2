@@ -13,5 +13,5 @@ variable "azs" {
 variable "name_prefix" {
     description = "모든 리소스 Name/Tag 접두사"
     type        = string
-    default     = "std17-test"
+    default     = "std17-test-"
 }
