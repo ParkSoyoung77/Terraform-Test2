@@ -44,6 +44,11 @@ resource "aws_route" "std17_public_rt_route" {
 }
 
 resource "aws_route_table_association" "std17_public_rt_assoc" {
+    for_each = {
+        "ap-northeast-3a" = aws_subnet.std17_public_subnet.id
+        "ap-northeast-3b" = aws_subnet.std17_public_subnet.id
+        "ap-northeast-3c" = aws_subnet.std17_public_subnet.id
+    }
     subnet_id      = aws_subnet.std17_public_subnet.id
     route_table_id = aws_route_table.std17_public_rt.id
 }
