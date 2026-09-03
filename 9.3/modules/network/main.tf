@@ -44,11 +44,6 @@ resource "aws_route" "std17_public_rt_route" {
 }
 
 resource "aws_route_table_association" "std17_public_rt_assoc" {
-    for_each = {
-        "ap-northeast-3a" = aws_subnet.std17_public_subnet.id
-        "ap-northeast-3b" = aws_subnet.std17_public_subnet.id
-        "ap-northeast-3c" = aws_subnet.std17_public_subnet.id
-    }
     subnet_id      = aws_subnet.std17_public_subnet.id
     route_table_id = aws_route_table.std17_public_rt.id
 }
@@ -63,4 +58,44 @@ resource "aws_subnet" "std17_private_subnet" {
     tags = {
         Name = "${var.name_prefix}-private-subnet"
     }
+}
+
+resource "aws_eip" "std17_nat_eip" {
+    domain = "vpc"
+
+    tags = {
+        Name = "${var.name_prefix}-nat-eip"
+    }
+}
+
+resource "aws_nat_gateway" "std17_nat_gw" {
+    allocation_id = aws_eip.std17_nat_eip.id
+    subnet_id = aws_subnet.std17_public_subnet.id
+
+    depends_on = [
+        aws_internet_gateway.std17_igw
+    ]
+
+    tags = {
+        Name = "${var.name_prefix}-nat-gw"
+    }
+}
+
+resource "aws_route_table" "std17_private_rt" {
+    vpc_id = aws_vpc.std17_vpc.id
+
+    tags = {
+        Name = "${var.name_prefix}-private-rt"
+    }
+}
+
+resource "aws_route" "std17_private_rt_route" {
+    route_table_id         = aws_route_table.std17_private_rt.id
+    destination_cidr_block = "0.0.0.0/0"
+    gateway_id              = aws_nat_gateway.std17_nat_gw.id
+}
+
+resource "aws_route_table_association" "std17_private_rt_assoc" {
+    subnet_id      = aws_subnet.std17_private_subnet.id
+    route_table_id = aws_route_table.std17_private_rt.id
 }
