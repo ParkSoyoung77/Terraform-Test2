@@ -29,15 +29,33 @@ resource "aws_internet_gateway" "std17_igw" {
     }
 }
 
+resource "aws_route_table" "std17_public_rt" {
+    vpc_id = aws_vpc.std17_vpc.id
+
+    tags = {
+        Name = "${var.name_prefix}-public-rt"
+    }
+}
+
+resource "aws_route" "std17_public_rt_route" {
+    route_table_id         = aws_route_table.std17_public_rt.id
+    destination_cidr_block = "0.0.0.0/0"
+    gateway_id              = aws_internet_gateway.std17_igw.id
+}
+
+resource "aws_route_table_association" "std17_public_rt_assoc" {
+    subnet_id      = aws_subnet.std17_public_subnet.id
+    route_table_id = aws_route_table.std17_public_rt.id
+}
+
 # ====================================================
 
 resource "aws_subnet" "std17_private_subnet" {
     vpc_id            = aws_vpc.std17_vpc.id
     cidr_block        = "10.0.11.0/24"
-    availability_zone = var.azs[0]
+    availability_zone = var.azs[1]
 
     tags = {
         Name = "${var.name_prefix}-private-subnet"
     }
 }
-
