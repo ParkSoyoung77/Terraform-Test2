@@ -61,7 +61,7 @@ resource "aws_subnet" "std17_private_subnet" {
     availability_zone = var.azs[count.index]
 
     tags = {
-        Name = "${var.name_prefix}-private${count.index + 1}-subnet"
+        Name = "${var.name_prefix}private${count.index + 1}-subnet"
     }
 }
 
