@@ -4,5 +4,5 @@ output "vpc_id" {
 }
 
 output "public_subnet_ids" {
-    value = aws_subnet.std17_public_subnet[*].id
+  value = [for s in aws_subnet.std17_public_subnet : s.id]
 }
