@@ -9,3 +9,8 @@ module "security" {
     name_prefix = var.name_prefix
     vpc_id = module.network.vpc_id
  }
+
+ module "compute" {
+    source      = "./modules/compute"
+    name_prefix = var.name_prefix
+ }
