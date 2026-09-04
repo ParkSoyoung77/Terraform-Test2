@@ -13,3 +13,8 @@ variable "name_prefix" {
     type        = string
     default     = "std17-test-"
 }
+
+variable "public_subnet_ids" {
+    description = "프라이빗 서브넷 ID 리스트"
+    type        = list(string)
+}

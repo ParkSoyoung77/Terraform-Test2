@@ -13,4 +13,5 @@ module "security" {
  module "compute" {
     source      = "./modules/compute"
     name_prefix = var.name_prefix
+    public_subnet_ids = module.network.public_subnet_ids
  }

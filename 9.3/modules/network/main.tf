@@ -12,15 +12,17 @@ resource "aws_vpc" "std17_vpc" {
 
 resource "aws_subnet" "std17_public_subnet" {
 
-    count = 3
+    count = length(var.azs)
 
     vpc_id                  = aws_vpc.std17_vpc.id
-    cidr_block              = "10.0.${count.index + 1}.0/24"
+    cidr_block              = var.subnet_cidr[0][count.index]
     availability_zone       = var.azs[count.index]
+
     map_public_ip_on_launch = true
+    enable_resource_name_dns_a_record_on_launch = true
 
     tags = {
-        Name = "${var.name_prefix}public${count.index + 1}-subnet"
+        Name = "${var.name_prefix}public${var.azs[count.index]}-subnet"
     }
 }
 
@@ -47,21 +49,25 @@ resource "aws_route" "std17_public_rt_route" {
 }
 
 resource "aws_route_table_association" "std17_public_rt_assoc" {
-    count          = 3
-    subnet_id      = aws_subnet.std17_public_subnet[count.index].id
+    for_each = {
+        "ap-northeast-3a" = aws_subnet.std17_public_subnet[0].id
+        "ap-northeast-3b" = aws_subnet.std17_public_subnet[1].id
+        "ap-northeast-3c" = aws_subnet.std17_public_subnet[2].id
+    }
+    subnet_id      = each.value
     route_table_id = aws_route_table.std17_public_rt.id
 }
 
 # ====================================================
 
 resource "aws_subnet" "std17_private_subnet" {
-    count             = 3
+    count             = length(var.azs)
     vpc_id            = aws_vpc.std17_vpc.id
-    cidr_block        = "10.0.${count.index + 11}.0/24"
+    cidr_block        = var.subnet_cidr[1][count.index]
     availability_zone = var.azs[count.index]
 
     tags = {
-        Name = "${var.name_prefix}private${count.index + 1}-subnet"
+        Name = "${var.name_prefix}private${var.azs[count.index]}-subnet"
     }
 }
 
@@ -97,11 +103,11 @@ resource "aws_route_table" "std17_private_rt" {
 resource "aws_route" "std17_private_rt_route" {
     route_table_id         = aws_route_table.std17_private_rt.id
     destination_cidr_block = "0.0.0.0/0"
-    gateway_id              = aws_nat_gateway.std17_nat_gw.id
+    nat_gateway_id          = aws_nat_gateway.std17_nat_gw.id
 }
 
 resource "aws_route_table_association" "std17_private_rt_assoc" {
-    count          = 3
+    count          = length(var.azs)
     subnet_id      = aws_subnet.std17_private_subnet[count.index].id
     route_table_id = aws_route_table.std17_private_rt.id
 }
