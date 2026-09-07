@@ -55,8 +55,18 @@ resource "aws_security_group" "std17_external_alb_sg" {
 # NACL
 resource "aws_network_acl" "std17_ex_nacl" {
     vpc_id = var.vpc_id
+
     ingress {
-        rule_no    = 100 # rule_no는 중복되지 않게 작성
+        rule_no    = 90
+        protocol   = "tcp"
+        action     = "allow"
+        cidr_block = "0.0.0.0/0"
+        from_port  = 22
+        to_port    = 22
+    }
+
+    ingress {
+        rule_no    = 100
         protocol   = "tcp"
         action     = "allow"
         cidr_block = "0.0.0.0/0"
@@ -65,7 +75,7 @@ resource "aws_network_acl" "std17_ex_nacl" {
     }
 
     ingress {
-        rule_no    = 110 
+        rule_no    = 110
         protocol   = "tcp"
         action     = "allow"
         cidr_block = "0.0.0.0/0"
@@ -73,8 +83,17 @@ resource "aws_network_acl" "std17_ex_nacl" {
         to_port    = 443
     }
 
+    ingress {
+        rule_no    = 120
+        protocol   = "tcp"
+        action     = "allow"
+        cidr_block = "0.0.0.0/0"
+        from_port  = 1024
+        to_port    = 65535
+    }
+
     egress {
-        rule_no    = 100 
+        rule_no    = 100
         protocol   = "-1"
         action     = "allow"
         cidr_block = "0.0.0.0/0"
@@ -82,7 +101,9 @@ resource "aws_network_acl" "std17_ex_nacl" {
         to_port    = 0
     }
 
-    tags = {    }
+    tags = {
+        Name = "${var.name_prefix}ex-nacl"
+    }
 }
 
 # 서브넷 연결
