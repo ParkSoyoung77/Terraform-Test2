@@ -6,14 +6,14 @@ terraform {
         }
     }
 
-    # # 협업을 위한 상태 값 공유 저장소 설정
-    # backed "s3" {
-    #     bucket = "std17-instructor-bucket"
-    #     key    = "TerraformState/"
-    #     region = "ap-northeast-3"
-    #     dynamodb_table = ""
-    #     encrypt = true
-    # }
+    # 협업을 위한 상태 값 공유 저장소 설정
+    backend "s3" {
+        bucket = "std17-instructor-terraform-state-bucket"
+        key    = "TerraformState/Lab/ex-network/terraform.tfstate"  #버킷내 저장경로
+        region = "ap-northeast-3"
+        dynamodb_table = "std17-lab-lock-table"
+        encrypt = true
+    }
 }
 
 provider "aws"{
