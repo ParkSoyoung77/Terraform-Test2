@@ -26,3 +26,28 @@ resource "aws_instance" "std17_ex_instance" {
         Name = "std17-ex-instance"
     }
 }
+
+resource "aws_ami_from_instance" "std17_nginx_ami" {
+    name = "std17-ex-nginx-ami"
+    source_instance_id = aws_instance.std17_ex_instance.id
+
+    # 재부팅하여 이미지 생성: false
+    snapshot_without_reboot = false
+
+    tags = {
+        Name = "std17-ex-nginx-ami"
+    }
+}
+
+# ===============================================
+# 키페어
+# ===============================================
+
+# resource "aws_key_pair" "std17_lab_key" {
+#     key_name = "std17-lab-key"
+#     public_key = file("~/.ssh/id_rsa.pub")
+
+#     tags = {
+#         Name = "std17-lab-key"
+#     }
+# }
