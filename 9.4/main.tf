@@ -11,11 +11,13 @@ module "security" {
     public_subnet_id = module.network.public_subnet_id
  }
 
-# module "compute" {
-#     source      = "./modules/compute"
-#     name_prefix = var.name_prefix
-#     public_subnet_ids = module.network.public_subnet_ids
-#  }
+module "compute" {
+    source      = "./modules/compute"
+    name_prefix = var.name_prefix
+    public_subnet_id = module.network.public_subnet_id
+    ssh_sg_id           = module.security.ssh_sg_id
+    external_alb_sg_id  = module.security.external_alb_sg_id
+ }
 
 module "storage" {
     source      = "./modules/storage"

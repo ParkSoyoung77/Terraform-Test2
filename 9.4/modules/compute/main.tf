@@ -15,8 +15,8 @@ resource "aws_instance" "std17_ex_instance" {
     }
 
     vpc_security_group_ids = [
-        aws_security_group.std17_ssh_sg.id,
-        aws_security_group.std17_external_alb_sg.gateway_id
+        var.ssh_sg_id,
+        var.external_alb_sg_id
     ]
 
     user_data                   = file("${path.module}/scripts/user_data.sh")
