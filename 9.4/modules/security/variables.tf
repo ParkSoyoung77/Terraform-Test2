@@ -5,5 +5,9 @@ variable "vpc_id" {
 
 variable "name_prefix" {
     type    = string
-    default = "std17-test-"
+    default = "std17-lab-"
+}
+
+variable "public_subnet_id" {
+  type        = string
 }

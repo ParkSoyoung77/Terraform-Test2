@@ -1,6 +1,6 @@
 variable "name_prefix" {
     type    = string
-    default = "std17-test-"
+    default = "std17-lab-"
 }
 
 variable "aws_region" {
@@ -17,33 +17,4 @@ variable "azs" {
 variable "vpc_cidr" {
     type        = string
     default     = "10.0.0.0/16"
-}
-
-variable "region" {
-    type        = string
-    default     = "ap-northeast-3"
-}
-
-# variable "subnet_cidr" {
-#     type        = list(list(string))
-#     default     = [
-#         ["10.0.1.0/24","10.0.2.0/24", "10.0.3.0/24"],
-#         ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
-#     ]
-# }
-
-variable "subnet_cidr" {
-    type        = list(map(string))
-    default     = [
-        {
-            "ap-northeast-3a" = "10.0.1.0/24",
-            "ap-northeast-3b" = "10.0.2.0/24", 
-            "ap-northeast-3c" = "10.0.3.0/24"
-        },
-        {
-            "ap-northeast-3a" = "10.0.11.0/24", 
-            "ap-northeast-3b" = "10.0.12.0/24", 
-            "ap-northeast-3c" = "10.0.13.0/24"
-        }
-    ]
 }

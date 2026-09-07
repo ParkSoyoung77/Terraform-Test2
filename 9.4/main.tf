@@ -7,14 +7,15 @@ module "network" {
 module "security" {
     source      = "./modules/security"
     name_prefix = var.name_prefix
-    vpc_id = module.network.vpc_id
+    vpc_id           = module.network.vpc_id
+    public_subnet_id = module.network.public_subnet_id
  }
 
-module "compute" {
-    source      = "./modules/compute"
-    name_prefix = var.name_prefix
-    public_subnet_ids = module.network.public_subnet_ids
- }
+# module "compute" {
+#     source      = "./modules/compute"
+#     name_prefix = var.name_prefix
+#     public_subnet_ids = module.network.public_subnet_ids
+#  }
 
 module "storage" {
     source      = "./modules/storage"

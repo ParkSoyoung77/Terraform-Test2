@@ -1,32 +1,37 @@
-resource "aws_vpc" "std17_vpc" {
+# ====================================================
+# lab용 vpc 생성
+# ====================================================
+resource "aws_vpc" "std17_lab_vpc" {
     cidr_block           = var.vpc_cidr
-    instance_tenancy     = "default"
-    enable_dns_support   = true
     enable_dns_hostnames = true
+    enable_dns_support   = true
+    instance_tenancy     = "default"
+
     tags = {
-        Name = "${var.name_prefix}vpc"
+        Name = "std17-lab-vpc"
     }
 }
 
 # ====================================================
+# public 서브넷 / 라우팅
+# ====================================================
 
 resource "aws_subnet" "std17_public_subnet" {
-    for_each = toset(var.azs)
 
-    vpc_id                  = aws_vpc.std17_vpc.id
-    cidr_block              = var.subnet_cidr[0][each.key]
-    availability_zone       = each.key
+    vpc_id                  = aws_vpc.std17_lab_vpc.id
+    cidr_block              = "10.0.1.0/24"
+    availability_zone       = "ap-northeast-3a"
 
-    map_public_ip_on_launch = true
+    map_public_ip_on_launch                     = true
     enable_resource_name_dns_a_record_on_launch = true
 
     tags = {
-        Name = "${var.name_prefix}public-${each.key}-subnet"
+        Name = "${var.name_prefix}public-subnet"
     }
 }
 
 resource "aws_internet_gateway" "std17_igw" {
-    vpc_id = aws_vpc.std17_vpc.id
+    vpc_id = aws_vpc.std17_lab_vpc.id
 
     tags = {
         Name = "${var.name_prefix}igw"
@@ -34,7 +39,7 @@ resource "aws_internet_gateway" "std17_igw" {
 }
 
 resource "aws_route_table" "std17_public_rt" {
-    vpc_id = aws_vpc.std17_vpc.id
+    vpc_id = aws_vpc.std17_lab_vpc.id
 
     tags = {
         Name = "${var.name_prefix}public-rt"
@@ -48,23 +53,22 @@ resource "aws_route" "std17_public_rt_route" {
 }
 
 resource "aws_route_table_association" "std17_public_rt_assoc" {
-    for_each = aws_subnet.std17_public_subnet
-
-    subnet_id      = each.value.id
+    subnet_id      = aws_subnet.std17_public_subnet.id
     route_table_id = aws_route_table.std17_public_rt.id
 }
 
 # ====================================================
+# private 서브넷 / 라우팅
+# ====================================================
 
 resource "aws_subnet" "std17_private_subnet" {
-    for_each = toset(var.azs)
 
-    vpc_id            = aws_vpc.std17_vpc.id
-    cidr_block        = var.subnet_cidr[1][each.key]
-    availability_zone = each.key
+    vpc_id            = aws_vpc.std17_lab_vpc.id
+    cidr_block        = "10.0.11.0/24"
+    availability_zone = "ap-northeast-3a"
 
     tags = {
-        Name = "${var.name_prefix}private-${each.key}-subnet"
+        Name = "${var.name_prefix}private-subnet"
     }
 }
 
@@ -78,7 +82,7 @@ resource "aws_eip" "std17_nat_eip" {
 
 resource "aws_nat_gateway" "std17_nat_gw" {
     allocation_id = aws_eip.std17_nat_eip.id
-    subnet_id     = aws_subnet.std17_public_subnet[var.azs[0]].id
+    subnet_id     = aws_subnet.std17_public_subnet.id
 
     depends_on = [
         aws_internet_gateway.std17_igw
@@ -90,7 +94,7 @@ resource "aws_nat_gateway" "std17_nat_gw" {
 }
 
 resource "aws_route_table" "std17_private_rt" {
-    vpc_id = aws_vpc.std17_vpc.id
+    vpc_id = aws_vpc.std17_lab_vpc.id
 
     tags = {
         Name = "${var.name_prefix}private-rt"
@@ -104,21 +108,6 @@ resource "aws_route" "std17_private_rt_route" {
 }
 
 resource "aws_route_table_association" "std17_private_rt_assoc" {
-    for_each = aws_subnet.std17_private_subnet
-
-    subnet_id      = each.value.id
+    subnet_id      = aws_subnet.std17_private_subnet.id
     route_table_id = aws_route_table.std17_private_rt.id
-}
-
-# ====================================================
-# lab용 vpc 생성
-# ====================================================
-resource "aws_vpc" "std17_lab_vpc" {
-    cidr_block = "10.0.0.0/16"
-    enable_dns_hostnames = true
-    enable_dns_support   = true
-
-    tags = {
-        Name = "std17-lab-vpc"
-    }
 }
