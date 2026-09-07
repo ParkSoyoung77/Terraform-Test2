@@ -5,7 +5,7 @@ resource "aws_instance" "std17_ex_instance" {
     subnet_id = var.public_subnet_id
     key_name = "std17-key"
 
-    root_blook_device {
+    root_block_device {
         volume_size = 20
         volume_type = "gp3"
         delete_on_termination = true # 인스턴스 삭제 시, 볼륨 같이 삭제
