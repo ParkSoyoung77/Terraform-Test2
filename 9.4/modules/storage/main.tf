@@ -25,6 +25,8 @@ resource "aws_dynamodb_table" "terraform_lock" {
     # DynamoDB의 관리방식(비용과 연관된 설정)
     billing_mode = "PROVISIONED"    #PAY_PER_REQUEST
 
+    hash_key = "LockID"
+    
     read_capacity   = 20 # 초당 4KB 데이터 읽기(RCU) => 1RCU
     write_capacity = 20 # 초당 4KB 데이터 쓰기(WCU) => 1WCU
 
@@ -33,5 +35,4 @@ resource "aws_dynamodb_table" "terraform_lock" {
         type = "S"      # S(String), N(Number), B(Binary)
     }
 
-    hash_key = "LockID"
 }
