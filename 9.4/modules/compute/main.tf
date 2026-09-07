@@ -18,6 +18,9 @@ resource "aws_instance" "std17_ex_instance" {
         aws_security_group.std17_ssh_sg.id,
         aws_security_group.std17_external_alb_sg.gateway_id
     ]
+
+    user_data                   = file("${path.module}/scripts/user_data.sh")
+    user_data_replace_on_change = true
     
     tags = {
         Name = "std17-ex-instance"
