@@ -109,3 +109,16 @@ resource "aws_route_table_association" "std17_private_rt_assoc" {
     subnet_id      = each.value.id
     route_table_id = aws_route_table.std17_private_rt.id
 }
+
+# ====================================================
+# lab용 vpc 생성
+# ====================================================
+resource "aws_vpc" "std17_lab_vpc" {
+    cidr_block = "10.0.0.0/16"
+    enable_dns_hostnames = true
+    enable_dns_support   = true
+
+    tags = {
+        Name = "std17-lab-vpc"
+    }
+}
