@@ -28,25 +28,25 @@
 # }
 
 
-# ====================================================
-# ami, lt
-# ====================================================
-resource "aws_ami_from_instance" "std17_nginx_ami" {
-    name = "std17-ex-nginx-ami"
-    source_instance_id = aws_instance.std17_ex_instance.id
+# # ====================================================
+# # ami, lt
+# # ====================================================
+# resource "aws_ami_from_instance" "std17_nginx_ami" {
+#     name = "std17-ex-nginx-ami"
+#     source_instance_id = aws_instance.std17_ex_instance.id
 
-    # 재부팅하여 이미지 생성: false
-    snapshot_without_reboot = false
+#     # 재부팅하여 이미지 생성: false
+#     snapshot_without_reboot = false
 
-    tags = {
-        Name = "std17-ex-nginx-ami"
-    }
-}
+#     tags = {
+#         Name = "std17-ex-nginx-ami"
+#     }
+# }
 
 
 resource "aws_launch_template" "std17_ex_lt" {
     name_prefix = "std17-ex-lt-"
-    image_id    = aws_ami_from_instance.std17_nginx_ami.id
+    image_id    = var.instance_ami
     instance_type = "t3.nano"
 
     vpc_security_group_ids = [
@@ -136,6 +136,73 @@ resource "aws_autoscaling_group" "std17_ex_nginx_asg"{
         value               = "std17-ex-nginx-asg"
         propagate_at_launch = false # EC2 인스턴스에도 동일한 태그를 적용했는지
     }
+}
+
+resource "aws_autoscaling_policy" "std17_asg_policy" {
+    name = "std17-asg-policy"
+    autoscaling_group_name = aws_autoscaling_group.std17_ex_nginx_asg.name
+
+    # 조정 정책
+    policy_type = "TargetTrackingScaling"   # 대상 추적 방식
+
+    target_tracking_configuration {
+        predefined_metric_specification {
+            predefined_metric_type = "ASGAverageCPUUtilization"
+        }
+
+        target_value = 50.0
+    }
+}
+
+# ASG 예약 정책
+resource "aws_autoscaling_schedule" "scale_out_morning" {
+    scheduled_acion_name = "std17-scale-out-morning"
+    autoscaling_group_name = aws_autoscaling_group.std17_ex_nginx_asg.name
+
+    # 인스턴스 수량 설정
+    min_size         = 2
+    max_size         = 5
+    desired_capacity = 4
+
+    # 실행 주기 (cron 표현식: 분 시 일 월 요일)
+    recurrenc = "00 13 * * 1-5" # 월~금 KST 12:35
+    time_zone = "Asia/Seoul"
+}
+
+resource "aws_autoscaling_schedule" "scale_in" {
+    scheduled_acion_name = "std17-scale-out-moring"
+    autoscaling_group_name = aws_autoscaling_group.std17_ex_nginx_asg.name
+    
+    min_size         = 1
+    max_size         = 2
+    desired_capacity = 1
+
+    recurrenc = "10 13 * * 1-5" # 월~금 KST 12:35
+    time_zone = "Asia/Seoul"
+}
+
+# #  대상 그룹에 대상(인스턴스 등록)
+# resource "aws_lb_target_group_attachment" "std17_ex_tg_attal" {
+#     target_group_arns = aws_lb_target_group.std17_ex_nginx_tg.arn
+#     target_id         = 
+#     port              = 
+# }
+
+# ===============================================
+# 로드밸런서
+# ===============================================
+resource "aws_lb" "std17_ex_alb" {
+    name = "std17-ex-alb"
+    internal = false
+    load_balancer_type = "application"
+    subnets = var.subnet_ids
+
+    security_groups = [
+        var.exexternal_alb_sg_id
+    ]
+
+
+    tags = {Name = "std17-ex-alb"}
 }
 
 # ===============================================
