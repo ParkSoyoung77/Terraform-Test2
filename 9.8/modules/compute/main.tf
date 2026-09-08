@@ -28,20 +28,20 @@
 # }
 
 
-# # ====================================================
-# # ami, lt
-# # ====================================================
-# resource "aws_ami_from_instance" "std17_nginx_ami" {
-#     name = "std17-ex-nginx-ami"
-#     source_instance_id = aws_instance.std17_ex_instance.id
+# ====================================================
+# ami, lt
+# ====================================================
+resource "aws_ami_from_instance" "std17_nginx_ami" {
+    name = "std17-ex-nginx-ami"
+    source_instance_id = aws_instance.std17_ex_instance.id
 
-#     # 재부팅하여 이미지 생성: false
-#     snapshot_without_reboot = false
+    # 재부팅하여 이미지 생성: false
+    snapshot_without_reboot = false
 
-#     tags = {
-#         Name = "std17-ex-nginx-ami"
-#     }
-# }
+    tags = {
+        Name = "std17-ex-nginx-ami"
+    }
+}
 
 
 resource "aws_launch_template" "std17_ex_lt" {
