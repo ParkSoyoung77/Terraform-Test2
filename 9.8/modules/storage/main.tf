@@ -68,3 +68,36 @@ resource "aws_s3_bucket_public_access_block" "std17_ex_bucket_access" {
     block_public_policy     = false
     restrict_public_buckets = false
 }
+
+resource "aws_s3_bucket_website_configuration" "std17_ex_bucket_website" {
+    bucket = aws_s3_bucket.std17_ex_bucket.id
+
+    index_document {
+        suffix = "index.html"
+    }
+    error_document {
+        key    = "error.html"
+    }
+}
+
+resource "aws_s3_bucket_policy" "std17_ex_bucket_policy" {
+
+    bucket = aws_s3_bucket.std17_ex_bucket.id
+
+    depends_on = [
+        aws_s3_bucket_public_access_block.std17_ex_bucket_access
+    ]
+
+    policy = jsonencode({
+        Version = "2012-10-17"
+        Statement = [
+            {
+                Sid       = "PublicReadGetObject"
+                Effect    = "Allow"
+                Principal = "*"
+                action    = "s3:GetObject"
+                resource  = "${aws_s3_bucket.std17_ex_bucket.arn}/*"
+            }
+        ]
+    })
+}
