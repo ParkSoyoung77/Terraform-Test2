@@ -205,6 +205,29 @@ resource "aws_lb" "std17_ex_alb" {
     tags = {Name = "std17-ex-alb"}
 }
 
+resource "aws_lb_listener" "std17_ex_lb_http_listner" {
+    load_balancer_arn = aws_lb.std17_ex_alb.arn
+    protocol          = "HTTP"
+    port              = 80 # 사용자의 포트번호(외부/브라우저)
+
+    default_action {
+        type             = "forward" # 전달/승계(대상그룹)
+        target_group_arn = aws_lb_target_group.std17_ex_nginx_tg.arn
+    }
+
+    # # 에러 유형에 대한 대응 페이지로 리다이렉트
+    # default_action {
+    #     type             = "fixed-response"
+    #     fixed_response {
+    #         content_type = "text/html"
+    #         status_code  = "503"
+    #         message_body = <<-EOF
+    #           ~ HTML TAG ~
+    #         EOF
+    #     }
+    # }
+}
+
 # ===============================================
 # 키페어
 # ===============================================
