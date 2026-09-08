@@ -39,6 +39,38 @@ resource "aws_ami_from_instance" "std17_nginx_ami" {
     }
 }
 
+
+resource "aws_launch_template" "std17_ex_lt" {
+    name_prefix = "std17-ex-lt-"
+    image_id    = aws_ami_from_instance.std17_nginx_ami.id
+    instance_type = "t3.nano"
+
+    vpc_security_group_ids = [
+        var.ssh_sg_id,
+        var.external_alb_sg_id
+    ]
+
+    # 시작 템플릿에서는 base64encode)를 통해 암호화 필요
+    user_data = base64encode(<<-EOF
+    #!/bin/bash
+    systemctl start nginx
+    systemctl enable nginx
+    EOF
+    )
+
+    tag_specifications {
+        resource_type = "instance"
+        tags = { Name = "std17-ex-asg-instance"}
+    }
+
+    tag_specifications {
+        resource_type = "volume"
+        tags = { Name = "std17-ex-asg-instance-vol"}
+    }
+
+    tags = { Name = "std17-ex-asg-lt"}
+}
+
 # ===============================================
 # 키페어
 # ===============================================
