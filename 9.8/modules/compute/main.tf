@@ -134,7 +134,7 @@ resource "aws_autoscaling_group" "std17_ex_nginx_asg"{
     tag {
         key                 = "Name"
         value               = "std17-ex-nginx-asg"
-        propagate_at_launch = true
+        propagate_at_launch = true # EC2 인스턴스에도 동일한 태그를 적용했는지
     }
 }
 
