@@ -156,7 +156,7 @@ resource "aws_autoscaling_policy" "std17_asg_policy" {
 
 # ASG 예약 정책
 resource "aws_autoscaling_schedule" "scale_out_morning" {
-    scheduled_acion_name = "std17-scale-out-morning"
+    scheduled_action_name = "std17-scale-out-morning"
     autoscaling_group_name = aws_autoscaling_group.std17_ex_nginx_asg.name
 
     # 인스턴스 수량 설정
@@ -165,19 +165,19 @@ resource "aws_autoscaling_schedule" "scale_out_morning" {
     desired_capacity = 4
 
     # 실행 주기 (cron 표현식: 분 시 일 월 요일)
-    recurrenc = "00 13 * * 1-5" # 월~금 KST 12:35
+    recurrence = "00 13 * * 1-5" # 월~금 KST 12:35
     time_zone = "Asia/Seoul"
 }
 
 resource "aws_autoscaling_schedule" "scale_in" {
-    scheduled_acion_name = "std17-scale-out-moring"
+    scheduled_action_name = "std17-scale-out-moring"
     autoscaling_group_name = aws_autoscaling_group.std17_ex_nginx_asg.name
     
     min_size         = 1
     max_size         = 2
     desired_capacity = 1
 
-    recurrenc = "10 13 * * 1-5" # 월~금 KST 12:35
+    recurrence = "10 13 * * 1-5" # 월~금 KST 12:35
     time_zone = "Asia/Seoul"
 }
 
@@ -198,7 +198,7 @@ resource "aws_lb" "std17_ex_alb" {
     subnets = var.subnet_ids
 
     security_groups = [
-        var.exexternal_alb_sg_id
+        var.external_alb_sg_id
     ]
 
 
