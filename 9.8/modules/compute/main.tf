@@ -228,6 +228,21 @@ resource "aws_lb_listener" "std17_ex_lb_http_listner" {
     # }
 }
 
+# resource "aws_lb_listener" "std17_ex_lb_http_listner" {
+#     load_balancer_arn = aws_lb.std17_ex_alb.arn
+#     protocol          = "HTTPS"
+#     port              = 443 # 사용자의 포트번호(외부/브라우저)
+
+#     # 권장 보안 정책
+#     ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09" # ELBSecurityPolicy
+#     # certificate_arn   = "arn:aws:acm:"
+
+#     default_action {
+#         type             = "forward" # 전달/승계(대상그룹)
+#         target_group_arn = aws_lb_target_group.std17_ex_nginx_tg.arn
+#     }
+# }
+
 # Listner에 경로 규칙추가
 resource  "aws_lb_listener_rule" "std17_ex_lb_http_listener_path_rule" {
     listener_arn    = aws_lb_listener.std17_ex_lb_http_listner.arn
@@ -244,7 +259,9 @@ resource  "aws_lb_listener_rule" "std17_ex_lb_http_listener_path_rule" {
         path_pattern {
             values = ["/api", "api/*"]
         }
-    }
+    } 
+
+    tags = { Name = "std17-ex-lb-http-listener-path-rule"}
 }
 
 # ===============================================
