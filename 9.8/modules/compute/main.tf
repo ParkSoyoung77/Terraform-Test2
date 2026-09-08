@@ -228,6 +228,25 @@ resource "aws_lb_listener" "std17_ex_lb_http_listner" {
     # }
 }
 
+# Listner에 경로 규칙추가
+resource  "aws_lb_listener_rule" "std17_ex_lb_http_listener_path_rule" {
+    listener_arn    = aws_lb_listener.std17_ex_lb_http_listner.arn
+
+    # 1~50,000 사이의 규칙우선순위 지정, 낮을 수록 우선 순위가 높음.
+    priority    = 100
+    action {
+        type             = "forward"
+        target_group_arn = aws_lb_target_group.std17_ex_nginx_tg.arn
+    }
+    
+    # [라우팅 조건] URL 경로 정의
+    condition {
+        path_pattern {
+            values = ["/api", "api/*"]
+        }
+    }
+}
+
 # ===============================================
 # 키페어
 # ===============================================
