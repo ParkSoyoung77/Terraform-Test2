@@ -108,7 +108,8 @@ resource "aws_network_acl" "std17_ex_nacl" {
 
 # 서브넷 연결
 resource "aws_network_acl_association" "std17_ex_nacl_assoc"{
-    subnet_id = var.public_subnet_id
-    network_acl_id = aws_network_acl.std17_ex_nacl.id
+    count = length(var.subnet_ids)
 
+    subnet_id     = var.subnet_ids[count.index]
+    network_acl_id = aws_network_acl.std17_ex_nacl.id
 }

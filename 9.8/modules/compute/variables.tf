@@ -13,8 +13,8 @@ variable "name_prefix" {
     default = "std17-lab-"
 }
 
-variable "public_subnet_id" {
-  type        = string
+variable "subnet_ids" {
+  type = list(string)
 }
 
 variable "ssh_sg_id" {
@@ -24,5 +24,10 @@ variable "ssh_sg_id" {
 
 variable "external_alb_sg_id" {
   description = "External ALB security group ID from security module"
+  type        = string
+}
+
+variable "vpc_id" {
+  description = "보안그룹을 생성할 VPC ID"
   type        = string
 }

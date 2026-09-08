@@ -8,6 +8,6 @@ variable "name_prefix" {
     default = "std17-lab-"
 }
 
-variable "public_subnet_id" {
-  type        = string
+variable "subnet_ids" {
+  type = list(string)
 }

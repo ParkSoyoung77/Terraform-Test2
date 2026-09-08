@@ -17,16 +17,17 @@ resource "aws_vpc" "std17_lab_vpc" {
 # ====================================================
 
 resource "aws_subnet" "std17_public_subnet" {
+    count = 3
 
     vpc_id                  = aws_vpc.std17_lab_vpc.id
-    cidr_block              = "10.0.1.0/24"
-    availability_zone       = "ap-northeast-3a"
+    cidr_block              = "10.0.${count.index + 1}.0/24"
+    availability_zone       = "ap-northeast-3${element(["a", "b", "c"], count.index)}"
 
     map_public_ip_on_launch                     = true
     enable_resource_name_dns_a_record_on_launch = true
 
     tags = {
-        Name = "${var.name_prefix}public-subnet"
+        Name = "${var.name_prefix}public-subnet-${count.index + 1}"
     }
 }
 
@@ -53,7 +54,9 @@ resource "aws_route" "std17_public_rt_route" {
 }
 
 resource "aws_route_table_association" "std17_public_rt_assoc" {
-    subnet_id      = aws_subnet.std17_public_subnet.id
+    count = 3
+
+    subnet_id      = aws_subnet.std17_public_subnet[count.index].id
     route_table_id = aws_route_table.std17_public_rt.id
 }
 
@@ -82,7 +85,7 @@ resource "aws_eip" "std17_nat_eip" {
 
 resource "aws_nat_gateway" "std17_nat_gw" {
     allocation_id = aws_eip.std17_nat_eip.id
-    subnet_id     = aws_subnet.std17_public_subnet.id
+    subnet_id     = aws_subnet.std17_public_subnet[0].id
 
     depends_on = [
         aws_internet_gateway.std17_igw
