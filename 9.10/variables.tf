@@ -10,7 +10,7 @@ variable "azs" {
     default     = []
 }
 
-variable "name_prefix" {
+variable "tag_header" {
     description = "모든 리소스 Name/Tag 접두사"
     type        = string
     default     = ""
