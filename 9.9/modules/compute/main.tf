@@ -29,7 +29,7 @@ resource "aws_instance" "std17_ex_instance" {
 
 
 # ====================================================
-# ami, lt
+# ami
 # ====================================================
 resource "aws_ami_from_instance" "std17_nginx_ami" {
     name = "std17-ex-nginx-ami"
@@ -43,40 +43,8 @@ resource "aws_ami_from_instance" "std17_nginx_ami" {
     }
 }
 
-
-resource "aws_launch_template" "std17_ex_lt" {
-    name_prefix = "std17-ex-lt-"
-    image_id    = aws_ami_from_instance.std17_nginx_ami.id
-    instance_type = "t3.nano"
-
-    vpc_security_group_ids = [
-        var.ssh_sg_id,
-        var.external_alb_sg_id
-    ]
-
-    # 시작 템플릿에서는 base64encode)를 통해 암호화 필요
-    user_data = base64encode(<<-EOF
-    #!/bin/bash
-    systemctl start nginx
-    systemctl enable nginx
-    EOF
-    )
-
-    tag_specifications {
-        resource_type = "instance"
-        tags = { Name = "std17-ex-asg-instance"}
-    }
-
-    tag_specifications {
-        resource_type = "volume"
-        tags = { Name = "std17-ex-asg-instance-vol"}
-    }
-
-    tags = { Name = "std17-ex-asg-lt"}
-}
-
 # ====================================================
-# tg, asg
+# tg
 # ====================================================
 resource "aws_lb_target_group" "std17_ex_nginx_tg" {
     name = "std17-ex-nginx-tg"
@@ -108,85 +76,11 @@ resource "aws_lb_target_group" "std17_ex_nginx_tg" {
     tags = { Name = "std17-ex-nginx-tg"}
 }
 
-resource "aws_autoscaling_group" "std17_ex_nginx_asg"{
-    name = "std17-nginx-tg"
-    min_size         = 1
-    max_size         = 2
-    desired_capacity = 2
-
-    # 네트워크
-    vpc_zone_identifier = var.subnet_ids
-
-    # 대상그룹(ARN)
-    target_group_arns = [
-        aws_lb_target_group.std17_ex_nginx_tg.arn
-    ]
-
-    launch_template {
-        id = aws_launch_template.std17_ex_lt.id
-        version = "$Latest"
-    }
-
-    # 헬스 체크
-    health_check_type         = "EC2"   # or ELB
-    health_check_grace_period = 300     # 인스턴스 기동 후 헬스체크 유예시간(초)
-
-    tag {
-        key                 = "Name"
-        value               = "std17-ex-nginx-asg"
-        propagate_at_launch = false # EC2 인스턴스에도 동일한 태그를 적용했는지
-    }
+resource "aws_lb_target_group_attachment" "std17_ex_nginx_tg_attachment" {
+    target_group_arn = aws_lb_target_group.std17_ex_nginx_tg.arn
+    target_id         = aws_instance.std17_ex_instance.id
+    port              = 80
 }
-
-resource "aws_autoscaling_policy" "std17_asg_policy" {
-    name = "std17-asg-policy"
-    autoscaling_group_name = aws_autoscaling_group.std17_ex_nginx_asg.name
-
-    # 조정 정책
-    policy_type = "TargetTrackingScaling"   # 대상 추적 방식
-
-    target_tracking_configuration {
-        predefined_metric_specification {
-            predefined_metric_type = "ASGAverageCPUUtilization"
-        }
-
-        target_value = 50.0
-    }
-}
-
-# ASG 예약 정책
-resource "aws_autoscaling_schedule" "scale_out_morning" {
-    scheduled_action_name = "std17-scale-out-morning"
-    autoscaling_group_name = aws_autoscaling_group.std17_ex_nginx_asg.name
-
-    # 인스턴스 수량 설정
-    min_size         = 2
-    max_size         = 5
-    desired_capacity = 4
-
-    # 실행 주기 (cron 표현식: 분 시 일 월 요일)
-    recurrence = "00 13 * * 1-5" # 월~금 KST 12:35
-    time_zone = "Asia/Seoul"
-}
-
-resource "aws_autoscaling_schedule" "scale_in" {
-    scheduled_action_name = "std17-scale-out-moring"
-    autoscaling_group_name = aws_autoscaling_group.std17_ex_nginx_asg.name
-    
-    min_size         = 1
-    max_size         = 2
-    desired_capacity = 1
-
-    recurrence = "10 13 * * 1-5" # 월~금 KST 12:35
-    time_zone = "Asia/Seoul"
-}
-
-# #  대상 그룹에 대상(인스턴스 등록)
-# resource "aws_lb_target_group_attachment" "std17_ex_tg_attal" {
-#     target_group_arns = aws_lb_target_group.std17_ex_nginx_tg.arn
-#     target_id         = 
-#     port              = 
-# }
 
 # ===============================================
 # 로드밸런서
@@ -215,33 +109,8 @@ resource "aws_lb_listener" "std17_ex_lb_http_listner" {
         target_group_arn = aws_lb_target_group.std17_ex_nginx_tg.arn
     }
 
-    # # 에러 유형에 대한 대응 페이지로 리다이렉트
-    # default_action {
-    #     type             = "fixed-response"
-    #     fixed_response {
-    #         content_type = "text/html"
-    #         status_code  = "503"
-    #         message_body = <<-EOF
-    #           ~ HTML TAG ~
-    #         EOF
-    #     }
-    # }
 }
 
-# resource "aws_lb_listener" "std17_ex_lb_http_listner" {
-#     load_balancer_arn = aws_lb.std17_ex_alb.arn
-#     protocol          = "HTTPS"
-#     port              = 443 # 사용자의 포트번호(외부/브라우저)
-
-#     # 권장 보안 정책
-#     ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09" # ELBSecurityPolicy
-#     # certificate_arn   = "arn:aws:acm:"
-
-#     default_action {
-#         type             = "forward" # 전달/승계(대상그룹)
-#         target_group_arn = aws_lb_target_group.std17_ex_nginx_tg.arn
-#     }
-# }
 
 # Listner에 경로 규칙추가
 resource  "aws_lb_listener_rule" "std17_ex_lb_http_listener_path_rule" {
@@ -263,16 +132,3 @@ resource  "aws_lb_listener_rule" "std17_ex_lb_http_listener_path_rule" {
 
     tags = { Name = "std17-ex-lb-http-listener-path-rule"}
 }
-
-# ===============================================
-# 키페어
-# ===============================================
-
-# resource "aws_key_pair" "std17_lab_key" {
-#     key_name = "std17-lab-key"
-#     public_key = file("~/.ssh/id_rsa.pub")
-
-#     tags = {
-#         Name = "std17-lab-key"
-#     }
-# }
