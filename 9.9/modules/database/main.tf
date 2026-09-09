@@ -1,3 +1,7 @@
+locals {
+  db_credentials = jsondecode(aws_secretsmanager_secret_version.mysql_password_value.secret_string)
+}
+
 resource "aws_db_subnet_group" "std17_db_subnet_group" {
     name = "std17-db-subnet-group"
     subnet_ids = var.subnet_ids
@@ -13,10 +17,10 @@ resource "aws_db_instance" "std17_mysql_instance" {
 
     allocated_storage = 20 # 최소 사양
 
-    db_name  = "testdb"
-    username = "std17"
-    password = "12341234"
-
+    db_name  = local.db_credentials.database
+    username = local.db_credentials.username
+    password = local.db_credentials.password
+    
     db_subnet_group_name = aws_db_subnet_group.std17_db_subnet_group.name
     availability_zone    = var.azs[0]
 
@@ -43,12 +47,14 @@ resource "aws_secretsmanager_secret" "mysql_password" {
 resource "aws_secretsmanager_secret_version" "mysql_password_value" {
     secret_id = aws_secretsmanager_secret.mysql_password.id
     secret_string = jsonencode({
-    username = "std17"
-    password = random_password.mysql_password.result
+        database = "testdb"
+        username = "std17"
+        password = random_password.create_random_password.result
+        port     = 3306
   })
 }
 
-resource "random_password" "mysql_password" {
+resource "random_password" "create_random_password" {
   length  = 16
   special = true
   override_special = "!#$%^&*()-_=+[]{}<>:?"
