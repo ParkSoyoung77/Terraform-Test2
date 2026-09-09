@@ -17,6 +17,7 @@ resource "random_password" "create_random_password" {
 resource "aws_secretsmanager_secret" "mysql_password" {
     description = "RDS 데이터베이스 비밀번호"
     name        = "project/db/password"
+    recovery_window_in_days = 0 # 삭제 시 즉시 삭제, 대기기간 없음
 }
 
 # 보안 암호에 실제 사용할 암호 정의
@@ -67,46 +68,3 @@ resource "aws_rds_cluster" "std17_mysql_cluster" {
     tags = { Name = "std17-rds-mysql-multi-az-cluster"}
 }
 
-# ================================================================
-# Cloudformation
-# ================================================================
-
-resource "aws_serverlessapplicationrepository_cloudformation_stack" "mysql_rotation" {
-    # 클라우드 포메이션의 스택 이름
-    name = "rds-mysql-cluster-rotation-stack"
-
-    # 비밀번호 변경에 사용할 원본(기준) 함수(애플리케이션)의 ARN
-    application_id = "arn:aws:serverlessrepo:us-east-1:297356227824:applications/SecretsManagerRDSMySQLRotationSingleUser"
-
-    # 클라우드포메이션의 IAM 생성 및 리소스정책을 정의할 수 있게 허용
-    capabilities = ["CAPABILITY_IAM", "CAPABILITY_RESOURCE_POLICY"]
-
-    # lambda 함수 동작에 필요한 설정(Parameter)
-    parameters = {
-        # 람다 함수의 이름
-        functionName = "${var.name_prefix}rds-mysql-cluster-rotation-fn"
-
-        # 보안 암호 endpoint
-        endpoint = "https://secretsmanager.${var.aws_region}.amazonaws.com"
-
-        # lambda 함수가 접속해야할 데이터베이스가 포함된 서브넷 ID
-        vpcSubnetIds = join(",", var.private_subnet_ids)
-
-        # lambda 함수에 적용할 보안그룹 ID
-        vpcSecurityGroupIds = var.lambda_sg_id
-    }
-}
-
-# 시크릿 매니저에 저장된 암호를 지정된 람다 함수와 연결하는 리소스 생성
-resource "aws_secretsmanager_secret_rotation" "mysql_secret_rotation" {
-    # 바꿀 대상(보안 암호) 지정
-    secret_id = aws_secretsmanager_secret.mysql_password.id
-
-    # 사용할 람다함수 정의
-    rotation_lambda_arn = aws_serverlessapplicationrepository_cloudformation_stack.mysql_rotation.outputs["RotationLambdaARN"]
-
-    # 규칙 정의
-    rotation_rules {
-        automatically_after_days = 30
-    }
-}
