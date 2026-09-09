@@ -1,6 +1,14 @@
-variable "name_prefix" {
-    type    = string
-    default = "std17-lab-"
+variable "azs" {
+    type        = list(string)
+    default     = ["ap-northeast-3a", "ap-northeast-3b", "ap-northeast-3c"]
+}
+
+variable "mysql_sg_id" {
+  type        = string
+}
+
+variable "lambda_sg_id" {
+  type        = string  
 }
 
 variable "aws_region" {
@@ -9,12 +17,12 @@ variable "aws_region" {
     default     = "ap-northeast-3"
 }
 
-variable "azs" {
-    type        = list(string)
-    default     = ["ap-northeast-3a", "ap-northeast-3b", "ap-northeast-3c"]
+variable "private_subnet_ids" {
+  type = list(string)
 }
 
-variable "vpc_cidr" {
-    type        = string
-    default     = "10.0.0.0/16"
+variable "name_prefix" {
+  description = "리소스 이름 앞에 붙일 접두사"
+  type        = string
+  default     = "std17-"
 }

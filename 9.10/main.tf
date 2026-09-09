@@ -1,7 +1,8 @@
 module "network" {
     source      = "./modules/network"
-    azs         = var.azs
-    name_prefix = var.name_prefix
+    azs         = local.azs
+    vpc_cidr    = local.vpc_cidr
+    name_prefix = local.name_prefix
 }
 
 module "security" {
@@ -26,6 +27,7 @@ module "storage" {
 
 module "database" {
     source      = "./modules/database"
+    name_prefix = var.name_prefix
     private_subnet_ids = module.network.public_subnet_ids
     mysql_sg_id  = module.security.mysql_sg_id
     lambda_sg_id = module.security.lambda_sg_id

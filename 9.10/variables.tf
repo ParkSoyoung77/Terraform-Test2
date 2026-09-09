@@ -7,11 +7,21 @@ variable "aws_region" {
 variable "azs" {
     description = "사용할 가용영역 리스트"
     type        = list(string)
-    default     = ["ap-northeast-3a", "ap-northeast-3b", "ap-northeast-3c"]
+    default     = []
 }
 
 variable "name_prefix" {
     description = "모든 리소스 Name/Tag 접두사"
     type        = string
-    default     = "std17-test-"
+    default     = ""
+}
+
+variable "vpc_cidr" {
+    type        = string
+    default     = "10.0.0.0/16"
+}
+
+variable "owner" {
+    type        = string
+    default     = "std17"
 }
