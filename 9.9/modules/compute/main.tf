@@ -2,7 +2,7 @@ resource "aws_instance" "std17_ex_instance" {
     ami     = var.instance_ami
     instance_type = var.instance_type
 
-    subnet_id = var.subnet_ids[0]
+    subnet_id = var.public_subnet_ids[0]
     key_name = "std17-key"
 
     root_block_device {
@@ -24,22 +24,6 @@ resource "aws_instance" "std17_ex_instance" {
     
     tags = {
         Name = "std17-ex-instance"
-    }
-}
-
-
-# ====================================================
-# ami
-# ====================================================
-resource "aws_ami_from_instance" "std17_nginx_ami" {
-    name = "std17-ex-nginx-ami"
-    source_instance_id = aws_instance.std17_ex_instance.id
-
-    # 재부팅하여 이미지 생성: false
-    snapshot_without_reboot = false
-
-    tags = {
-        Name = "std17-ex-nginx-ami"
     }
 }
 
@@ -89,7 +73,7 @@ resource "aws_lb" "std17_ex_alb" {
     name = "std17-ex-alb"
     internal = false
     load_balancer_type = "application"
-    subnets = var.subnet_ids
+    subnets = var.public_subnet_ids
 
     security_groups = [
         var.external_alb_sg_id

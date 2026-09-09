@@ -9,3 +9,7 @@ output "external_alb_sg_id" {
 output "mysql_sg_id" {
   value = aws_security_group.std17_mysql_sg.id
 }
+
+output "lambda_sg_id" {
+  value = aws_security_group.std17_lambda_sg.id
+}

@@ -76,6 +76,24 @@ resource "aws_security_group" "std17_external_alb_sg" {
     }
 }
 
+# lambda function SG
+resource "aws_security_group" "std17_lambda_sg" {
+    name = "${var.name_prefix}lambda-sg"
+    description = "Security group for lambda function access"
+    vpc_id = var.vpc_id
+
+    egress {
+        from_port   = 0
+        to_port     = 0
+        protocol    = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    tags = {
+        Name = "${var.name_prefix}lambda-sg"
+    }    
+}
+
 # ==========================================================
 # NACL
 resource "aws_network_acl" "std17_ex_nacl" {
@@ -133,8 +151,8 @@ resource "aws_network_acl" "std17_ex_nacl" {
 
 # 서브넷 연결
 resource "aws_network_acl_association" "std17_ex_nacl_assoc"{
-    count = length(var.subnet_ids)
+    count = length(var.public_subnet_ids)
 
-    subnet_id     = var.subnet_ids[count.index]
+    subnet_id     = var.public_subnet_ids[count.index]
     network_acl_id = aws_network_acl.std17_ex_nacl.id
 }
