@@ -54,8 +54,8 @@ resource "aws_s3_bucket_policy" "std17_ex_bucket_policy" {
                 Sid       = "PublicReadGetObject"
                 Effect    = "Allow"
                 Principal = "*"
-                action    = "s3:GetObject"
-                resource  = "${aws_s3_bucket.std17_ex_bucket.arn}/*"
+                Action    = "s3:GetObject"
+                Resource  = "${aws_s3_bucket.std17_ex_bucket.arn}/*"
             }
         ]
     })
