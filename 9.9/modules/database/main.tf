@@ -31,3 +31,25 @@ resource "aws_db_instance" "std17_mysql_instance" {
 
     tags = { Name = "std17-mysql-instance"}
 }
+
+# ================================================================
+# 보안 암호 생성
+resource "aws_secretsmanager_secret" "mysql_password" {
+    description = "RDS 데이터베이스 비밀번호"
+    name        = "project/db/password"
+}
+
+# 보안 암호에 실제 사용할 암호 정의
+resource "aws_secretsmanager_secret_version" "mysql_password_value" {
+    secret_id = aws_secretsmanager_secret.mysql_password.id
+    secret_string = jsonencode({
+    username = "std17"
+    password = random_password.mysql_password.result
+  })
+}
+
+resource "random_password" "mysql_password" {
+  length  = 16
+  special = true
+  override_special = "!#$%^&*()-_=+[]{}<>:?"
+}

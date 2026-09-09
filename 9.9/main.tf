@@ -27,4 +27,5 @@ module "storage" {
 module "database" {
     source      = "./modules/database"
     subnet_ids = module.network.public_subnet_ids
+    mysql_sg_id = module.security.mysql_sg_id
 }
