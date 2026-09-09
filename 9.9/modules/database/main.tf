@@ -21,7 +21,7 @@ resource "aws_db_instance" "std17_mysql_instance" {
     availability_zone    = var.azs[0]
 
     vpc_security_group_ids = [
-        var.
+        var.mysql_sg_id
     ]
 
     # 백업(최소 7일)
