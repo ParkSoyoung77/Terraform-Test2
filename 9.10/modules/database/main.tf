@@ -74,7 +74,7 @@ resource "aws_rds_cluster" "std17_mysql_cluster" {
 resource "aws_iam_role" "proxy_role" {
     name = "${local.tag_header}rds-proxy-secrets-role"
 
-    auume_role_policy = jsonencode ({
+    assume_role_policy = jsonencode ({
         Version = "2012-10-17"
         Statement = [{
             Action = "sts:AssumeRole"
@@ -97,15 +97,15 @@ resource "aws_iam_role_policy" "proxy_policy" {
         Statement = [{
             Effect = "Allow"
             Action = [
-                "secretsmanager:GetSecrtValue"
+                "secretsmanager:GetSecretValue"
             ]
-            Resource = [aws_secretsmanager_secret.mysql_secrets_manager.arn ]
+            Resource = [aws_secretsmanager_secret.mysql_password.arn]
         }]
     })
 }
 
 resource "aws_db_proxy" "proxy" {
-    name = "${local.tag_header}-rds-mysql-cluster-proxy"
+    name = "${local.tag_header}rds-mysql-cluster-proxy"
 
     engine_family = "MYSQL"
 
@@ -138,12 +138,28 @@ resource "aws_db_proxy" "proxy" {
         auth_scheme = "SECRETS"
 
         # 사용할 Secrets Manager 설정(ARN)
-        secret_arn = aws_secretsmanager_secret.mysql_secrets_manager.arn
+        secret_arn = aws_secretsmanager_secret.mysql_password.arn
     }
 
     tags = {Name = "${local.tag_header}rds-mysql-cluster-proxy"}
 }
 
+resource "aws_db_proxy_default_target_group" "proxy_target_group" {
+    db_proxy_name = aws_db_proxy.proxy.name
+
+    # 접속자들 관리 환경 정의
+    connection_pool_config {
+        # 로그인 유지 시간(초)
+        connection_borrow_timeout = 300
+
+        # 최대 연결 수 
+        # 데이터베이스의 최대 연결 허용치에 대한 비율을 정의
+        max_connections_percent = 100
+
+        # 최대 연결 수 중 idle 상태의 연결을 유지시킬 비율
+        max_idle_connections_percent = 50
+    }
+}
 # # ================================================================
 # # Cloudformation
 # # ================================================================
