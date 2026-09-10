@@ -114,4 +114,36 @@ resource "aws_eks_cluster" "k8s" {
         # 생성자에게 자동으로 관리자 권할을 부여
         bootstrap_cluster_creator_admin_permissions = true
     }
+
+    depends_on = [aws_iam_role_policy_attachment.cluster_policy]
+}
+
+# ======================================================
+# 3. 노드 그룹 구성
+# ======================================================
+resource "aws_launch_template" "launch_template" {
+    name_prefix            = "${local.tag_header}k8s-node"
+    image_id               = var.image_id
+    instance_type          = "t3.small"
+    key_name               = "std17-key"
+    vpc_security_group_ids = [
+        var.ssh_sg_id,
+        var.external_alb_sg_id
+    ]
+
+    update_default_version = true
+    user_data = base64encode(<<-EOF
+    
+    EOF
+    )
+
+    tag_specifications {
+        resource_type = "instance"
+        tags          = {Name = "${local.tag_header}instance"}
+    }
+
+    tag_specifications {
+        resource_type = "volume"
+        tags          = {Name = "${local.tag_header}volume"}
+    }
 }

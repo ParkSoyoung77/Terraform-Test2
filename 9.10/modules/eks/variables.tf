@@ -16,3 +16,20 @@ variable "owner" {
 variable "private_subnet_ids" {
   type = list(string)
 }
+
+variable "image_id" {
+    type = string
+    default = ""
+}
+
+variable "ssh_sg_id" {
+  type = string
+}
+
+variable "external_alb_sg_id" {
+  type = string
+}
+
+variable "mysql_sg_id" {
+  type = string
+}
