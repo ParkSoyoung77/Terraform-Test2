@@ -129,7 +129,8 @@ resource "aws_launch_template" "launch_template" {
     vpc_security_group_ids = [
         var.ssh_sg_id,
         var.external_alb_sg_id,
-        aws_security_group.std17_eks_sg.id
+        aws_security_group.std17_eks_sg.id,
+        aws_eks_cluster.k8s.vpc_config[0].cluster_security_group_id
     ]
 
     update_default_version = true
@@ -175,5 +176,17 @@ resource "aws_eks_node_group" "eks_node_group" {
         name    = aws_launch_template.launch_template.name
         version = aws_launch_template.launch_template.latest_version
         # 삭제 / version = $Default
+    }
+
+    depends_on = [aws_iam_role_policy_attachment.node_policy]
+}
+
+# ======================================================
+# (+) 사용자 연결
+# ======================================================
+resource "null_resource" "update_kubeconfig" {
+    depends_on = [aws_eks_node_group.node_policy]
+    provisioner "local-exec" {
+        command = "aws eks update-kubeconfig --region ${local.region} --name ${aws_eks_cluster.k8s.name}"
     }
 }
