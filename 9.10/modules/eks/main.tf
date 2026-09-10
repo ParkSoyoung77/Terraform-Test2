@@ -133,12 +133,17 @@ resource "aws_launch_template" "launch_template" {
     ]
 
     update_default_version = true
-    user_data = base64encode(<<-EOF
-    apt update -y
-    apt install nginx -y
-    status start nginx
-    status enable nginx
-    EOF
+    user_data = base64encode(<<-EOT
+    ---
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      cluster:
+        name: ${aws_eks_cluster.k8s.name}
+        apiServerEndpoint: ${aws_eks_cluster.k8s.endpoint}
+        certificateAuthority: ${aws_eks_cluster.k8s.certificate_authority[0].data}
+        cidr: ${aws_eks_cluster.k8s.kubernetes_network_config[0].service_ipv4_cidr}
+    EOT
     )
 
     tag_specifications {
