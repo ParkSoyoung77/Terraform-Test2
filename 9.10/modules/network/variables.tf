@@ -21,5 +21,5 @@ variable "vpc_cidr" {
 
 variable "owner" {
     type        = string
-    default     = ""
+    default     = "std17"
 }
