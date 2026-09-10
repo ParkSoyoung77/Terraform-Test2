@@ -144,6 +144,7 @@ resource "aws_db_proxy" "proxy" {
     tags = {Name = "${local.tag_header}rds-mysql-cluster-proxy"}
 }
 
+# Proxy와 기본 타겟 그룹 연결
 resource "aws_db_proxy_default_target_group" "proxy_target_group" {
     db_proxy_name = aws_db_proxy.proxy.name
 
@@ -159,6 +160,18 @@ resource "aws_db_proxy_default_target_group" "proxy_target_group" {
         # 최대 연결 수 중 idle 상태의 연결을 유지시킬 비율
         max_idle_connections_percent = 50
     }
+}
+
+# RDS Proxy와 실제 백엔드 데이터베이스(Aurora Cluster)를 상호 연결
+resource "aws_db_proxy_target" "proxy_target_cluster" {
+    # Proxy와의 연결 구성
+    db_proxy_name = aws_db_proxy.proxy.name
+
+    # proxy_target_group과의 연결 구성
+    target_group_name = aws_db_proxy_default_target_group.proxy_target_group.name
+
+    # Databast 연결 구성
+    db_cluster_identifier = aws_rds_cluster.std17_mysql_cluster.id
 }
 # # ================================================================
 # # Cloudformation
