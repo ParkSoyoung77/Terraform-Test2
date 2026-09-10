@@ -156,3 +156,25 @@ resource "aws_launch_template" "launch_template" {
         tags          = {Name = "${local.tag_header}volume"}
     }
 }
+
+# 노드 그룹 생성
+resource "aws_eks_node_group" "eks_node_group" {
+    node_group_name = "${local.tag_header}eks-node-group"
+    cluster_name = aws_eks_cluster.k8s.name
+
+    node_role_arn = aws_iam_role.node_role.arn
+    subnet_ids = var.private_subnet_ids
+    instance_types = ["t3.small"]
+
+    scaling_config {
+        desired_size = 2
+        max_size     = 3
+        min_size    = 1
+    }
+
+    launch_template {
+        name    = aws_launch_template.launch_template.name
+        version = aws_launch_template.launch_template.latest_version
+        # 삭제 / version = $Default
+    }
+}
