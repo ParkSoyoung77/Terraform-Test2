@@ -214,4 +214,5 @@ resource "aws_eks_access_policy_association" "bipa17_student17_admin" {
     }
 
     depends_on = [aws_eks_access_entry.bipa17_student17]
+    # addon
 }

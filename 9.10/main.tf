@@ -38,3 +38,9 @@ module "eks" {
     aws_region = var.aws_region
     principal_arn      = var.principal_arn
 }
+
+module "dynamodb" {
+    source      = "./modules/dynamodb"
+    owner    = var.owner
+    vpc_cidr = var.vpc_cidr
+}
