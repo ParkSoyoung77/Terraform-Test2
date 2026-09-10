@@ -25,3 +25,11 @@ module "security" {
     owner               = var.owner
     vpc_cidr            = var.vpc_cidr
 }
+
+module "eks" {
+    source      = "./modules/eks"
+    tag_header  = local.tag_header
+    vpc_id           = module.network.vpc_id
+    owner  = var.owner
+    private_subnet_ids = module.network.public_subnet_ids
+}
