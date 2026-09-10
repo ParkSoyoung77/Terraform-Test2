@@ -35,4 +35,5 @@ module "eks" {
     mysql_sg_id = module.security.mysql_sg_id
     external_alb_sg_id = module.security.external_alb_sg_id
     ssh_sg_id = module.security.ssh_sg_id
+    aws_region = var.aws_region
 }

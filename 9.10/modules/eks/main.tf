@@ -13,7 +13,7 @@
 # 노드 간 통신 모두 열어줌
 # ======================================================
 resource "aws_security_group" "std17_eks_sg" {
-    name = "${var.tag_header}eks-sg"
+    name = "${local.tag_header}eks-sg"
     description = "Security group for EKS access"
     vpc_id = var.vpc_id
 
@@ -40,7 +40,7 @@ resource "aws_security_group" "std17_eks_sg" {
     }
 
     tags = {
-        Name = "${var.tag_header}eks-sg"
+        Name = "${local.tag_header}eks-sg"
     }
 }
 
@@ -185,8 +185,8 @@ resource "aws_eks_node_group" "eks_node_group" {
 # (+) 사용자 연결
 # ======================================================
 resource "null_resource" "update_kubeconfig" {
-    depends_on = [aws_eks_node_group.node_policy]
+    depends_on = [aws_eks_node_group.eks_node_group]
     provisioner "local-exec" {
-        command = "aws eks update-kubeconfig --region ${local.region} --name ${aws_eks_cluster.k8s.name}"
+        command = "aws eks update-kubeconfig --region ${var.aws_region} --name ${aws_eks_cluster.k8s.name}"
     }
 }

@@ -28,3 +28,7 @@ variable "external_alb_sg_id" {
 variable "mysql_sg_id" {
   type = string
 }
+
+variable "aws_region" {
+    type = string
+}
