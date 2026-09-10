@@ -123,17 +123,21 @@ resource "aws_eks_cluster" "k8s" {
 # ======================================================
 resource "aws_launch_template" "launch_template" {
     name_prefix            = "${local.tag_header}k8s-node"
-    image_id               = var.image_id
+    image_id               = data.aws_ami.eks_ami.id
     instance_type          = "t3.small"
     key_name               = "std17-key"
     vpc_security_group_ids = [
         var.ssh_sg_id,
-        var.external_alb_sg_id
+        var.external_alb_sg_id,
+        aws_security_group.std17_eks_sg.id
     ]
 
     update_default_version = true
     user_data = base64encode(<<-EOF
-    
+    apt update -y
+    apt install nginx -y
+    status start nginx
+    status enable nginx
     EOF
     )
 
