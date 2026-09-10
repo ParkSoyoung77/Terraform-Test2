@@ -182,11 +182,36 @@ resource "aws_eks_node_group" "eks_node_group" {
 }
 
 # ======================================================
-# (+) 사용자 연결
+# 4. 사용자 연결
 # ======================================================
 resource "null_resource" "update_kubeconfig" {
     depends_on = [aws_eks_node_group.eks_node_group]
     provisioner "local-exec" {
         command = "aws eks update-kubeconfig --region ${var.aws_region} --name ${aws_eks_cluster.k8s.name}"
     }
+}
+
+# ======================================================
+# 5. 사용자 등록
+# ======================================================
+resource "aws_eks_access_entry" "bipa17_student17" {
+    cluster_name = aws_eks_cluster.k8s.name
+    # 등록할 사용자의 계정 ARN
+    principal_arn = var.principal_arn
+
+    # IAM 역할 부여
+    kubernetes_groups = ["master"]
+    type              = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "bipa17_student17_admin" {
+    cluster_name = aws_eks_cluster.k8s.name
+    policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+    principal_arn = var.principal_arn
+
+    access_scope {
+        type = "cluster" # 적용 범위: 클러스터 전체
+    }
+
+    depends_on = [aws_eks_access_entry.bipa17_student17]
 }

@@ -25,3 +25,8 @@ variable "owner" {
     type        = string
     default     = "std17"
 }
+
+variable "principal_arn" {
+    type        = string
+    description = "EKS 접근을 허용할 IAM 사용자/역할의 ARN"
+}
