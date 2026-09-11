@@ -10,6 +10,14 @@ output "private_subnet_ids" {
     value = [for k, v in aws_subnet.this : v.id if local.subnet_map[k].type == "private"]
 }
 
-output "private_route_table_id" {
-    value = aws_route_table.private.id
+output "cluster_subnet_ids" {
+    value = [for k, v in aws_subnet.this : v.id if local.subnet_map[k].type == "cluster"]
+}
+
+output "private_route_table_ids" {
+    value = { for k, v in aws_route_table.private : k => v.id }
+}
+
+output "cluster_route_table_id" {
+    value = aws_route_table.cluster.id
 }

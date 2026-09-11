@@ -7,3 +7,11 @@ variable "tag_header" {
     type    = string
     default = ""
 }
+
+variable "vpc_cidr" {
+    type = string
+}
+
+variable "private_subnet_ids" {
+    type = list(string)
+}

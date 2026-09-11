@@ -6,7 +6,7 @@ locals {
   cidr_header = "${split(".", var.vpc_cidr)[0]}.${split(".", var.vpc_cidr)[1]}"
 
   subnet_map = merge([
-    for idx, key in ["public", "private"] : {
+    for idx, key in ["public", "private", "cluster"] : {
       for i, az in local.azs : "${key}${split("-", az)[2]}" => {
         type = key
         az   = az

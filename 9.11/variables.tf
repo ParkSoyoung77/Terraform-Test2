@@ -25,3 +25,7 @@ variable "owner" {
     type        = string
     default     = "std17"
 }
+
+variable "principal_arn" {
+    type = string
+}

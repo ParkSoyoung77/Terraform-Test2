@@ -23,3 +23,8 @@ variable "owner" {
     type        = string
     default     = "std17"
 }
+
+variable "cluster_name" {
+    type    = string
+    default = ""
+}
