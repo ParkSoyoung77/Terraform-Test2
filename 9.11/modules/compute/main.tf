@@ -95,7 +95,7 @@ resource "aws_vpc_endpoint" "ecr_api" {
 
     private_dns_enabled = true
 
-    subnet_ids = concat(var.private_subnet_ids, var.cluster_subnet_ids)
+    subnet_ids = var.private_subnet_ids
 
     security_group_ids = [ var.eks_node_sg_id ]
 
@@ -109,7 +109,7 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
 
     private_dns_enabled = true
 
-    subnet_ids = concat(var.private_subnet_ids, var.cluster_subnet_ids)
+    subnet_ids = var.private_subnet_ids
 
     security_group_ids = [ var.eks_node_sg_id ]
 
