@@ -3,6 +3,10 @@ output "aws_region" {
     value       = var.aws_region
 }
 
+output "available_az" {
+    value = data.aws_availability_zones.available_az.names
+}
+
 output "subnet_map" {
     value = local.subnet_map
 }
