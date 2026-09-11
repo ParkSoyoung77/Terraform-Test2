@@ -18,5 +18,13 @@ module "storage" {
     source      = "./modules/storage"
     vpc_id                  = module.network.vpc_id
     tag_header              = local.tag_header
+}
+
+module "compute" {
+    source      = "./modules/compute"
+    vpc_id                  = module.network.vpc_id
+    tag_header              = local.tag_header
+    private_subnet_ids      = module.network.private_subnet_ids
+    external_alb_sg_id      = module.security.external_alb_sg_id
     private_route_table_id  = module.network.private_route_table_id
 }

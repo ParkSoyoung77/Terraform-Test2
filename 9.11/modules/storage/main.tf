@@ -63,24 +63,3 @@ resource "aws_s3_bucket_policy" "std17_ex_bucket_policy" {
         ]
     })
 }
-
-# =========================================================
-# S3 엔드포인트 설정
-# =========================================================
-# 1. 서비스 데이터 소스 정의 
-data "aws_vpc_endpoint_service" "s3" {
-    service         = "s3"
-    service_type    = "Gateway"
-}
-
-# 2. 엔드포인트 생성 및 연결
-resource "aws_vpc_endpoint" "s3_endpoint" {
-    vpc_id            = var.vpc_id
-    service_name      = data.aws_vpc_endpoint_service.s3.service_name
-
-    vpc_endpoint_type = "Gateway"
-
-    route_table_ids   = [var.private_route_table_id]
-
-    tags = { Name = "${local.tag_header}s3-endpoint"}
-}
