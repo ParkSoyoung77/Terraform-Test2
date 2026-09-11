@@ -40,7 +40,7 @@ resource "aws_vpc_endpoint" "ecr_api" {
 
 resource "aws_vpc_endpoint" "ecr_dkr" {
     vpc_id  = var.vpc_id
-    service_name = "com.amazonaws.${var.aws_region}.dkr.api"
+    service_name = "com.amazonaws.${var.aws_region}.ecr.dkr"
     vpc_endpoint_type = "Interface"
 
     # [필수] ECR의 기본 URL 주소 호환
