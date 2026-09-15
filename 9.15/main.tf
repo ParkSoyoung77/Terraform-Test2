@@ -1,5 +1,5 @@
 module "mumbai_network" {
-  source = "../modules/network"
+  source = "./modules/network"
   # providers = { aws = aws.seoul }
   azs                = local.azs
   vpc_cidr_block     = local.vpc_cidr_block
@@ -15,7 +15,7 @@ module "mumbai_network" {
 }
 
 module "rds" {
-  source      = "../modules/database"
+  source      = "./modules/database"
   tag_header  = local.tag_header
   vpc_id      = local.vpc_id
   region      = local.region
