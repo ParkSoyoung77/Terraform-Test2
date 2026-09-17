@@ -5,8 +5,10 @@ on:
     branches:
       - main
   pull:
-    branches:
-      - main
+    branches: [main]
+    paths:
+      - 'infra/project/**'
+#       - 'project/**'
 #       paths: # 배포 기준이 될 파일이 있는 위치(변경된 파일 기준)
 #         - 'infra/**'
 #         - 'scripts/**'
@@ -14,7 +16,7 @@ on:
 #     branches: [main]
 #     paths:
 #       - 'infra/project/**'
-#       - 'project/**'
+#         - 'project/**'
 
 # 2. 권한 설정 (OpenID Connect 또는 시크릿 접근 권한)
 permissions:
@@ -40,8 +42,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.15.8
-
+          terraform_version: 1.8.x
       # 3-4. AWS 인증 정보 설정 (Github Secrets 활용) => 환경변수 만들기
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
