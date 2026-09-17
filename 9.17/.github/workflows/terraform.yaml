@@ -9,7 +9,8 @@ on:
     paths:
       - 'infra/project/**'
 #       - 'project/**'
-#       paths: # 배포 기준이 될 파일이 있는 위치(변경된 파일 기준)
+
+#   paths: # 배포 기준이 될 파일이 있는 위치(변경된 파일 기준)
 #         - 'infra/**'
 #         - 'scripts/**'
 #   pull_request:
