@@ -1,0 +1,71 @@
+name: "Terraform CI/CD Pipeline"
+# 1. 트리거 조건 설정: 어떤 이벤트에서 워크플로우를 실행할지 지정
+on:
+  push:
+    branches:
+      - main
+  pull:
+    branches:
+      - main
+#       paths: # 배포 기준이 될 파일이 있는 위치(변경된 파일 기준)
+#         - 'infra/**'
+#         - 'scripts/**'
+#   pull_request:
+#     branches: [main]
+#     paths:
+#       - 'infra/project/**'
+#       - 'project/**'
+
+# 2. 권한 설정 (OpenID Connect 또는 시크릿 접근 권한)
+permissions:
+  contents: read
+
+# 3. 전체 작업에 대한 서버 구성 및 배포 설정 파일의 위치
+jobs:
+  terraform:
+    name: "Terraform Plan & Apply"
+    runs-on: ubuntu-latest
+
+    # 3-1. 배포 대상 테라폼 파일의 위치 경로
+    defaults:
+      run:
+        working-directory: ./infra/project
+
+    steps:
+    # 3-2. 소스 코드 체크아웃 (저장소의 파일을 러너로 다운로드)
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 3-3. Terraform CLI 도구 설치
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+
+      # 3-4. AWS 인증 정보 설정 (Github Secrets 활용) => 환경변수 만들기
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          audience: sts.amazonaws.com  # AWS 정속에 사용될토큰 발급 대상 지정
+          output-env-credentials: true # 깃허브 액션의 환경 변수 자동 저장
+
+      # 3-5. 테라폼 초기화 (Provider 다운로드 및 Backend 설정)
+      - name: Terraform Init
+        run: treeraform Init
+
+
+      # 3-6. 테라폼 코드 포맷 검증
+      - name: Terraform Validate
+        run: terraform validate
+
+      # 3-7. 변경 사항 미리보기 (Plan)
+      - name: Terraform Plan
+        run: terraform plan -no-color # 브라우저 출력 시, 색 코드로 인한 글자 깨짐방지
+        continue-on-error: false      # Error 발생 시, 계속 진행(true), 종료(false)
+
+      # 3-8. 인프라 반영 (Apply / Destroy)
+      - name: Terraform Apply & Destroy
+        run: terraform apply --auto-approve
