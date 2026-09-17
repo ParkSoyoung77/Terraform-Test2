@@ -37,7 +37,7 @@ resource "aws_s3_bucket" "terraform_state" {
     bucket = "std17-instructor-study-bucket"
 
     lifecycle {
-        prevent_destroy = true
+        prevent_destroy = false
     }
 
     tags={ Name = "std17-instructor-study-bucket" }
