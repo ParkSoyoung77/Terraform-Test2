@@ -1,0 +1,124 @@
+# ======================================================================
+# 5. CodePipeline 서비스 IAM Role
+# ======================================================================
+
+resource "aws_iam_role" "codepipeline_role" {
+  name = "${var.tag_header}AmazonCodePipelineService-Role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "codepipeline.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+# CodePipeline 실행 권한 (S3, CodeBuild, CodeDeploy 액세스)
+resource "aws_iam_role_policy" "codepipeline_policy" {
+  name = "${var.tag_header}CodePipelineServicePolicy"
+  role = aws_iam_role.codepipeline_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:GetObjectVersion", "s3:GetBucketVersioning", "s3:PutObjectAcl", "s3:PutObject"]
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["codebuild:BatchGetBuilds", "codebuild:StartBuild"]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "codedeploy:CreateDeployment",
+          "codedeploy:GetApplication",
+          "codedeploy:GetApplicationRevision",
+          "codedeploy:GetDeployment",
+          "codedeploy:GetDeploymentConfig",
+          "codedeploy:RegisterApplicationRevision"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# ======================================================================
+# 6. Pipeline Artifacts 저장용 S3 Bucket
+# ======================================================================
+
+resource "random_id" "bucket_suffix" {
+  byte_length = 4
+}
+
+resource "aws_s3_bucket" "pipeline_bucket" {
+  bucket        = "${var.tag_header}pipeline-artifacts-${random_id.bucket_suffix.hex}"
+  force_destroy = true
+}
+
+# ======================================================================
+# 연결 작업 - AWS <-> GitHub 간 CodeStar Connection 생성
+# ======================================================================
+resource "aws_codestarconnections_connection" "github" {
+  name          = "${var.tag_header}github-connection"
+  provider_type = "GitHub"
+}
+
+# ======================================================================
+# 7. AWS CodePipeline 생성
+# ======================================================================
+
+resource "aws_codepipeline" "codepipeline" {
+  name     = "${var.tag_header}asg-cicd-pipeline"
+  role_arn = aws_iam_role.codepipeline_role.arn
+
+  artifact_store {
+    location = aws_s3_bucket.pipeline_bucket.bucket
+    type     = "S3"
+  }
+
+  # Stage 1: Source (GitHub / CodeStar Connection 기준)
+  stage {
+    name = "Source"
+
+    action {
+      name             = "Source"
+      category         = "Source"
+      owner            = "AWS"
+      provider         = "CodeStarSourceConnection"
+      version          = "1"
+      output_artifacts = ["source_output"]
+
+      configuration = {
+        ConnectionArn    = aws_codestarconnections_connection.github.arn
+        FullRepositoryId = var.github_repository_id
+        BranchName       = var.github_branch
+      }
+    }
+  }
+
+  # Stage 2: Deploy (CodeDeploy ASG 배포)
+  stage {
+    name = "Deploy"
+
+    action {
+      name            = "Deploy"
+      category        = "Deploy"
+      owner           = "AWS"
+      provider        = "CodeDeploy"
+      input_artifacts = ["source_output"]
+      version         = "1"
+
+      configuration = {
+        ApplicationName     = aws_codedeploy_app.app.name
+        DeploymentGroupName = aws_codedeploy_deployment_group.dg.deployment_group_name
+      }
+    }
+  }
+}

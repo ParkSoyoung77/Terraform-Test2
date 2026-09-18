@@ -44,7 +44,19 @@ variable "deployment_config_name" {
 }
 
 variable "codedeploy_agent_region" {
-    description = "CodeDeploy Agent 설치 스크립트를 받아올 리전 (원본은 ap-south-1로 하드코딩되어 있었음)"
+    description = "CodeDeploy Agent 설치 스크립트를 받아올 리전 (원본 코드는 ap-south-1로 하드코딩되어 있었음)"
     type        = string
     default     = "ap-northeast-3"
+}
+
+variable "github_repository_id" {
+    description = "CodePipeline 소스로 연결할 GitHub 저장소 (owner/repo 형식)"
+    type        = string
+    default     = "ParkSoyoung77/Terraform-Test2"
+}
+
+variable "github_branch" {
+    description = "CodePipeline이 감시할 GitHub 브랜치"
+    type        = string
+    default     = "main"
 }

@@ -4,6 +4,10 @@ terraform {
             source ="hashicorp/aws"
             version = "~> 6.0"
         }
+        random = {
+            source  = "hashicorp/random"
+            version = "~> 3.6"
+        }
     }
 
     # # 협업을 위한 상태 값 공유 저장소 설정

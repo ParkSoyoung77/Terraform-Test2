@@ -1,3 +1,8 @@
+# ==========================================
+# 1. IAM Roles & Instance Profile
+# ==========================================
+
+# (1) EC2 Instance Role (ASG Nodes)
 resource "aws_iam_role" "asg_node_role" {
   name = "${var.tag_header}AmazonASGNodeEC2-Role"
 
@@ -31,6 +36,7 @@ resource "aws_iam_instance_profile" "asg_node_profile" {
   role = aws_iam_role.asg_node_role.name
 }
 
+# (2) CodeDeploy Service Role
 resource "aws_iam_role" "codedeploy_role" {
   name = "${var.tag_header}AmazonCodeDeployService-Role"
 
@@ -49,6 +55,11 @@ resource "aws_iam_role_policy_attachment" "codedeploy_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
 }
 
+# ==========================================
+# 2. Launch Template & UserData
+# ==========================================
+
+# Amazon Linux 2023 최신 AMI 조회
 data "aws_ami" "al2023" {
   most_recent = true
   owners      = ["amazon"]
@@ -69,6 +80,7 @@ resource "aws_launch_template" "asg_lt" {
     name = aws_iam_instance_profile.asg_node_profile.name
   }
 
+  # Docker 및 CodeDeploy Agent 자동 설치 스크립트 (base64 자동 인코딩)
   user_data = base64encode(<<-EOF
               #!/bin/bash
               dnf update -y
@@ -96,6 +108,11 @@ resource "aws_launch_template" "asg_lt" {
   }
 }
 
+# ==========================================
+# 3. Auto Scaling Group
+# ==========================================
+
+# 타겟 서브넷 조회 (Type 태그 기준)
 data "aws_subnets" "target_subnets" {
   filter {
     name   = "tag:Type"
@@ -116,11 +133,17 @@ resource "aws_autoscaling_group" "asg" {
   }
 }
 
+# ==========================================
+# 4. CodeDeploy Application & Deployment Group
+# ==========================================
+
+# CodeDeploy Application 생성
 resource "aws_codedeploy_app" "app" {
   compute_platform = "Server"
   name             = "${var.tag_header}asg-codedeploy-app"
 }
 
+# CodeDeploy Deployment Group 생성 (ASG 연동)
 resource "aws_codedeploy_deployment_group" "dg" {
   app_name              = aws_codedeploy_app.app.name
   deployment_group_name = "${var.tag_header}asg-deployment-group"
