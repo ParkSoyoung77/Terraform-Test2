@@ -66,6 +66,7 @@ resource "aws_s3_bucket" "pipeline_bucket" {
 # 연결 작업 - AWS <-> GitHub 간 CodeStar Connection 생성
 # ======================================================================
 resource "aws_codestarconnections_connection" "github" {
+  provider      = aws.tokyo
   name          = "${var.tag_header}github-connection"
   provider_type = "GitHub"
 }
