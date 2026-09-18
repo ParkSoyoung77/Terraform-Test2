@@ -36,6 +36,11 @@ module "codedeploy" {
     source     = "./modules/codedeploy"
     tag_header = local.tag_header
 
+    providers = {
+        aws       = aws
+        aws.tokyo = aws.tokyo
+    }
+
     vpc_security_group_ids = [
         module.security.ssh_sg_id,
         module.security.external_alb_sg_id,

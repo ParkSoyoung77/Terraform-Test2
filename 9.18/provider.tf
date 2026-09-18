@@ -24,8 +24,11 @@ terraform {
     # }
 }
 
-provider "aws"{
-    region = "ap-northeast-3"
+# CodeStar Connections(GitHub 연동)가 오사카 리전에서 지원되지 않아
+# 도쿄 리전용 provider alias를 추가로 정의합니다.
+provider "aws" {
+    alias  = "tokyo"
+    region = "ap-northeast-1"
     default_tags {
         tags = {
             Class = "bipa17"
