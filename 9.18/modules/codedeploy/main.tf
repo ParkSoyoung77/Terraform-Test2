@@ -27,7 +27,7 @@ resource "aws_iam_role_policy_attachment" "ssm_core" {
 }
 
 resource "aws_iam_instance_profile" "asg_node_profile" {
-  name = "ASG-Node-EC2-Instance-Profile"
+  name = "${var.tag_header}ASG-Node-EC2-Instance-Profile"
   role = aws_iam_role.asg_node_role.name
 }
 
