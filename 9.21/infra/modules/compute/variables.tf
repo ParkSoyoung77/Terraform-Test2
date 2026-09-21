@@ -58,6 +58,17 @@ variable "instance_type" {
 }
 
 variable "default_version" {
-    type = string
-    default = "latest" # 특정 버전을 지정하고자 할 경우 문자열 형태의 숫자 기재
+    description = "Launch Template의 기본 버전 (숫자 문자열 또는 \"latest\")"
+    type        = string
+    default     = "latest"
+}
+
+variable "instance_profile_name" {
+    description = "EC2에 부여할 IAM Instance Profile 이름 (CodeDeploy 권한 포함)"
+    type        = string
+}
+
+variable "subnet_tag_type" {
+  description = "ASG 인스턴스를 배치할 서브넷을 찾기 위한 tag:Type 값 (예: private)"
+  type        = string
 }

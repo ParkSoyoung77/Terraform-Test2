@@ -36,7 +36,10 @@ resource "aws_iam_instance_profile" "asg_node_profile" {
   role = aws_iam_role.asg_node_role.name
 }
 
-# (2) CodeDeploy Service Role
+# ================================================================================
+# CodeDeploy 역할(Role)
+# --------------------------------------------------------------------------------
+# 역할 생성
 resource "aws_iam_role" "codedeploy_role" {
   name = "${var.tag_header}AmazonCodeDeployService-Role"
 
@@ -45,11 +48,12 @@ resource "aws_iam_role" "codedeploy_role" {
     Statement = [{
       Effect    = "Allow"
       Principal = { Service = "codedeploy.amazonaws.com" }
-      Action    = "sts:AssumeRole"
+      Action    = "sts:AssumeRole" # IAM Role을 임시로 획득하여 권한을 행사할 수 있도록 허용
     }]
   })
 }
 
+# 관리형 정책을 역할에 연결
 resource "aws_iam_role_policy_attachment" "codedeploy_policy" {
   role       = aws_iam_role.codedeploy_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
