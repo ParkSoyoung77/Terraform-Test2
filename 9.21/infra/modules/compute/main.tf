@@ -59,6 +59,26 @@ resource "aws_launch_template" "asg_lt" {
     # 기본 버전 지정 방법
     default_version = var.default_version != "latest" ? tostring(var.default_version) : null
 
+    user_data = base64encode(<<-EOF
+    #!/bin/bash
+    dnf update -y
+    # ruby: CodeDeploy서비스 개발 언어, codedeploy-agent 설치를 위해 반드시 필요
+    dnf install -y ruby wget docker
+
+    systemctl start docker
+    systemctl enable docker
+    usermod -aG docker ec2-user
+
+    cd /tmp
+    wget https://aws-codedeploy-ap-south-1.s3.ap-south-1.amazonaws.com/latest/install
+    chmod +x ./install
+    ./install auto
+
+    systemctl start codedeploy-agent
+    systemctl enable codedeploy-agent
+    EOF
+    )
+
     tag_specifications {
         resource_type = "instance"
         tags = {
