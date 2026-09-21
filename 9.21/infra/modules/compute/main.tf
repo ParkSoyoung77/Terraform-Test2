@@ -49,6 +49,24 @@ resource "aws_ami_from_instance" "std17_nginx_ami" {
     }
 }
 
+resource "aws_launch_template" "asg_lt" {
+    name_prefix   = "${local.tag_header}-"
+    image_id      = local.ami_id 
+    instance_type = var.instance_type
+    key_name      = local.key_name
+    vpc_security_group_ids = [ var.external_alb_sg_id, var.ssh_sg_id]
+
+    # 기본 버전 지정 방법
+    default_version = var.default_version != "latest" ? tostring(var.default_version) : null
+
+    tag_specifications {
+        resource_type = "instance"
+        tags = {
+            Name = "${local.tag_header}asg-node-instance"
+        }
+    }
+}
+
 # ===============================================
 # 키페어
 # ===============================================

@@ -29,6 +29,15 @@ module "compute" {
     cluster_route_table_id  = module.network.cluster_route_table_id
 }
 
+module "storage" {
+    source              = "./modules/storage"
+    vpc_id              = module.network.vpc_id
+    owner               = var.owner
+    tag_header          = local.tag_header
+    vpc_cidr            = var.vpc_cidr
+    private_subnet_ids  = module.network.private_subnet_ids
+}
+
 # ====================================================
 # CodeDeploy 모듈 - ASG 기반 CodeDeploy 배포 환경
 # ====================================================

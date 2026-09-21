@@ -56,3 +56,8 @@ variable "instance_type" {
     type = string
     default = "t3.nano"
 }
+
+variable "default_version" {
+    type = string
+    default = "latest" # 특정 버전을 지정하고자 할 경우 문자열 형태의 숫자 기재
+}

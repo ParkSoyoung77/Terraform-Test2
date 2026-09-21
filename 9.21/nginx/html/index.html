@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeDeploy Test Page</title>
+    <style>
+        body {
+            font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #0f172a;
+            color: #f1f5f9;
+        }
+        .container {
+            text-align: center;
+            padding: 48px;
+            background: #1e293b;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+            min-width: 320px;
+        }
+        h1 {
+            color: #38bdf8;
+            margin-bottom: 4px;
+        }
+        .version {
+            font-size: 48px;
+            font-weight: 700;
+            color: #4ade80;
+            margin: 20px 0;
+        }
+        .meta {
+            color: #94a3b8;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        .meta span {
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Deployment Status</h1>
+        <div class="version">v1</div>
+        <p class="meta">
+            Deployed via: <span>CodeDeploy</span><br>
+            Region: <span>ap-northeast-3</span><br>
+            Server: <span id="hostname">-</span>
+        </p>
+    </div>
+
+    <script>
+        // 클라이언트에서 표시용 시각 - 실제 인스턴스 식별은 서버 사이드 렌더링이나
+        // user_data.sh에서 index.html을 sed로 치환하는 방식을 권장합니다.
+        document.getElementById('hostname').textContent = window.location.hostname;
+    </script>
+</body>
+</html>
