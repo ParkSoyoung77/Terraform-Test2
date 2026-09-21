@@ -31,7 +31,6 @@ module "compute" {
     private_route_table_ids = module.network.private_route_table_ids
     cluster_route_table_id  = module.network.cluster_route_table_id
 
-    instance_profile_name   = module.iam.instance_profile_name
     subnet_tag_type         = "private"
 }
 
@@ -44,10 +43,10 @@ module "storage" {
     private_subnet_ids  = module.network.private_subnet_ids
 }
 
-module "iam" {
-    source              = "./modules/iam"
-    tag_header = local.tag_header
-}
+# module "iam" {
+#     source              = "./modules/iam"
+#     tag_header = local.tag_header
+# }
 
 
 # ====================================================
@@ -64,7 +63,9 @@ module "codedeploy" {
     tag_header             = local.tag_header
     golden_ami_id           = module.compute.golden_ami_id   
     vpc_security_group_ids  = [module.security.external_alb_sg_id, module.security.ssh_sg_id]
-    subnet_tag_type         = "cluster"
+    
+    subnet_tag_type         = "private"
+    
     github_repository_id    = "ParkSoyoung77/Terraform-Test2"
     github_branch           = "main"
 }

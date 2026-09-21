@@ -121,7 +121,7 @@ resource "aws_codepipeline" "codepipeline" {
     action {
       name             = "Source"
       category         = "Source"
-      owner            = "AWS"
+      owner            = "AWS"  # 액션 제공자(AWS에서 제공하는 서비스 활용)
       provider         = "CodeStarSourceConnection"
       version          = "1"
       output_artifacts = ["source_output"]

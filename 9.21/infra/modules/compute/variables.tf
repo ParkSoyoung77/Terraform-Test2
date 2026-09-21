@@ -63,11 +63,6 @@ variable "default_version" {
     default     = "latest"
 }
 
-variable "instance_profile_name" {
-    description = "EC2에 부여할 IAM Instance Profile 이름 (CodeDeploy 권한 포함)"
-    type        = string
-}
-
 variable "subnet_tag_type" {
   description = "ASG 인스턴스를 배치할 서브넷을 찾기 위한 tag:Type 값 (예: private)"
   type        = string
