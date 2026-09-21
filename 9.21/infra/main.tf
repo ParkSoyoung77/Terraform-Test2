@@ -30,7 +30,7 @@ module "compute" {
     
     private_route_table_ids = module.network.private_route_table_ids
     cluster_route_table_id  = module.network.cluster_route_table_id
-    
+
     instance_profile_name   = module.iam.instance_profile_name
     subnet_tag_type         = "private"
 }
@@ -54,18 +54,17 @@ module "iam" {
 # CodeDeploy 모듈 - ASG 기반 CodeDeploy 배포 환경
 # ====================================================
 module "codedeploy" {
-    source     = "./modules/codedeploy"
-    tag_header = local.tag_header
+    source = "./modules/codedeploy"
 
     providers = {
         aws       = aws
         aws.tokyo = aws.tokyo
     }
 
-    vpc_security_group_ids = [
-        module.security.ssh_sg_id,
-        module.security.external_alb_sg_id,
-    ]
-
-    subnet_tag_type = "cluster"
+    tag_header             = local.tag_header
+    golden_ami_id           = module.compute.golden_ami_id   
+    vpc_security_group_ids  = [module.security.external_alb_sg_id, module.security.ssh_sg_id]
+    subnet_tag_type         = "cluster"
+    github_repository_id    = "ParkSoyoung77/Terraform-Test2"
+    github_branch           = "main"
 }

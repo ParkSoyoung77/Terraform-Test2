@@ -49,68 +49,68 @@ resource "aws_ami_from_instance" "std17_nginx_ami" {
     }
 }
 
-resource "aws_launch_template" "asg_lt" {
-    name_prefix   = "${local.tag_header}-"
-    image_id      = local.ami_id 
-    instance_type = var.instance_type
-    key_name      = local.key_name
-    vpc_security_group_ids = [ var.external_alb_sg_id, var.ssh_sg_id]
+# resource "aws_launch_template" "asg_lt" {
+#     name_prefix   = "${local.tag_header}-"
+#     image_id      = local.ami_id 
+#     instance_type = var.instance_type
+#     key_name      = local.key_name
+#     vpc_security_group_ids = [ var.external_alb_sg_id, var.ssh_sg_id]
 
-    # 기본 버전 지정 방법
-    update_default_version = var.default_version == "latest" ? true : false
-    default_version         = var.default_version != "latest" ? tostring(var.default_version) : null
+#     # 기본 버전 지정 방법
+#     update_default_version = var.default_version == "latest" ? true : false
+#     default_version         = var.default_version != "latest" ? tostring(var.default_version) : null
 
-    iam_instance_profile {
-        name = var.instance_profile_name
-    }
+#     iam_instance_profile {
+#         name = var.instance_profile_name
+#     }
 
-    user_data = base64encode(<<-EOF
-    #!/bin/bash
-    dnf update -y
-    # ruby: CodeDeploy서비스 개발 언어, codedeploy-agent 설치를 위해 반드시 필요
-    dnf install -y ruby wget docker
+#     user_data = base64encode(<<-EOF
+#     #!/bin/bash
+#     dnf update -y
+#     # ruby: CodeDeploy서비스 개발 언어, codedeploy-agent 설치를 위해 반드시 필요
+#     dnf install -y ruby wget docker
 
-    systemctl start docker
-    systemctl enable docker
-    usermod -aG docker ec2-user
+#     systemctl start docker
+#     systemctl enable docker
+#     usermod -aG docker ec2-user
 
-    cd /tmp
-    wget https://aws-codedeploy-${var.aws_region}.s3.${var.aws_region}.amazonaws.com/latest/install
-    chmod +x ./install
-    ./install auto
+#     cd /tmp
+#     wget https://aws-codedeploy-${var.aws_region}.s3.${var.aws_region}.amazonaws.com/latest/install
+#     chmod +x ./install
+#     ./install auto
 
-    systemctl start codedeploy-agent
-    systemctl enable codedeploy-agent
-    EOF
-    )
+#     systemctl start codedeploy-agent
+#     systemctl enable codedeploy-agent
+#     EOF
+#     )
 
-    tag_specifications {
-        resource_type = "instance"
-        tags = {
-            Name = "${local.tag_header}asg-node-instance"
-        }
-    }
-}
+#     tag_specifications {
+#         resource_type = "instance"
+#         tags = {
+#             Name = "${local.tag_header}asg-node-instance"
+#         }
+#     }
+# }
 
-data "aws_subnets" "target_subnets" {
-  filter {
-    name   = "tag:Type"
-    values = [var.subnet_tag_type]
-  }
-}
+# data "aws_subnets" "target_subnets" {
+#   filter {
+#     name   = "tag:Type"
+#     values = [var.subnet_tag_type]
+#   }
+# }
 
-resource "aws_autoscaling_group" "asg" {
-  name                = "${local.tag_header}codedeploy-asg"
-  min_size            = 1
-  max_size            = 3
-  desired_capacity    = 2
-  vpc_zone_identifier = data.aws_subnets.target_subnets.ids
+# resource "aws_autoscaling_group" "asg" {
+#   name                = "${local.tag_header}codedeploy-asg"
+#   min_size            = 1
+#   max_size            = 3
+#   desired_capacity    = 2
+#   vpc_zone_identifier = data.aws_subnets.target_subnets.ids
 
-  launch_template {
-    id      = aws_launch_template.asg_lt.id
-    version = "$Latest"
-  }
-}
+#   launch_template {
+#     id      = aws_launch_template.asg_lt.id
+#     version = "$Latest"
+#   }
+# }
 
 # ===============================================
 # 키페어

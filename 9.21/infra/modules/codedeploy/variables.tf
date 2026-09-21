@@ -60,3 +60,20 @@ variable "github_branch" {
     type        = string
     default     = "main"
 }
+
+variable "golden_ami_id" {
+  description = "compute 모듈에서 생성한 nginx golden AMI ID"
+  type        = string
+}
+
+variable "key_name" {
+  description = "ASG 인스턴스에 사용할 EC2 키페어 이름"
+  type        = string
+  default     = "std17-key"
+}
+
+variable "default_version" {
+  description = "Launch Template의 기본 버전 (숫자 문자열 또는 \"latest\")"
+  type        = string
+  default     = "latest"
+}
