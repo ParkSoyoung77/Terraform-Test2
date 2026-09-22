@@ -61,11 +61,11 @@ module "codedeploy" {
     }
 
     tag_header             = local.tag_header
-    golden_ami_id           = module.compute.golden_ami_id   
+    golden_ami_id           = module.compute.golden_ami_id
     vpc_security_group_ids  = [module.security.external_alb_sg_id, module.security.ssh_sg_id]
-    
-    subnet_tag_type         = "private"
-    
+
+    subnet_ids              = module.network.private_subnet_ids   # subnet_tag_type 대신
+
     github_repository_id    = "ParkSoyoung77/Terraform-Test2"
     github_branch           = "main"
 }

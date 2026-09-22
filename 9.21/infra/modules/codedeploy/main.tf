@@ -112,19 +112,19 @@ resource "aws_launch_template" "asg_lt" {
 # ==========================================
 
 # 타겟 서브넷 조회 (Type 태그 기준)
-data "aws_subnets" "target_subnets" {
-  filter {
-    name   = "tag:Type"
-    values = [var.subnet_tag_type]
-  }
-}
+# data "aws_subnets" "target_subnets" {
+#   filter {
+#     name   = "tag:Type"
+#     values = [var.subnet_tag_type]
+#   }
+# }
 
 resource "aws_autoscaling_group" "asg" {
   name                = "${var.tag_header}codedeploy-asg"
   min_size            = var.asg_min_size
   max_size            = var.asg_max_size
   desired_capacity    = var.asg_desired_capacity
-  vpc_zone_identifier = data.aws_subnets.target_subnets.ids
+  vpc_zone_identifier = var.subnet_ids
 
   launch_template {
     id      = aws_launch_template.asg_lt.id

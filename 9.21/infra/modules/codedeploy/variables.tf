@@ -10,10 +10,15 @@ variable "vpc_security_group_ids" {
     default     = []
 }
 
-variable "subnet_tag_type" {
-    description = "ASG 대상 서브넷을 찾기 위한 Type 태그 값"
-    type        = string
-    default     = "cluster"
+# variable "subnet_tag_type" {
+#     description = "ASG 대상 서브넷을 찾기 위한 Type 태그 값"
+#     type        = string
+#     default     = "cluster"
+# }
+
+variable "subnet_ids" {
+  description = "ASG 인스턴스를 배치할 서브넷 ID 목록"
+  type        = list(string)
 }
 
 variable "instance_type" {
