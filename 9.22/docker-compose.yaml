@@ -12,3 +12,8 @@ services:
 
         # SSH 포트번호 변경(인스턴스의 SSH와 충돌 방지)
         gitlab_rails['gitlab_shell_ssh_port'] = 2222 # 보안 그룹의 인바운드 Allow 포트번호와 일치해야 함
+
+        #
+        puma['worker_processes'] = 2      # 웹 서버 프로세스의 수 제한 (메모리 사용량 제한)
+        sidekiq['max_concurrency'] = 10   # 백그라운드 작업 처리 스레드 수 제한
+        prometheus_monitoring['enable'] = false
