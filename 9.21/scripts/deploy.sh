@@ -1,19 +1,25 @@
-# CodeDeploy 배포 명세서(설계도, 지침서) - GitHub Action의 Workflow파일과 같은 역할
-version: 0.0
-os: linux
+#!/bin/bash
+# 변수 설정
+REGION="ap-northeast-3"
+ECR_REPOSITORY="nginx"
+CONTAINER_NAME="nginx-app"
 
-# S3 번들 파일이 EC2 인스턴스에 복사될 위치 지정
-files:
-  - source: / # 압축 파일 내부의 전체 내용을 대상으로 함.
-    destination: /home/ec2-user/app # EC2 인스터스의 소스파일 저장 위치(디렉토리 자동 생성)
+# 권한 획득
+ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+ECR_URI="$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:latest"
 
-# 복사된 파일/폴더 권한 설정
-permissions:
-  - object: /home/ec2-user/app/scripts # 소유권 변경 대상 지정(.sh파일에 실행 권한이 부여되어있어야 함)
-    pattern: "**" # chmod 명령어를 object 하위 디렉토리 모두를 권한 설정 대상으로 함(-R), *는 scripts 안에 있는 것만 대상
-    owner: ec2-user
-    group: ec2-user
-    mode: 755
+# 로그인
+aws ecr get-login-password --region $REGION | \
+  docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
 
-# CodeDeploy 배포 라이프사이클
-hooks:
+# 이미지(Docker) Pull
+docker pull $ECR_URI
+
+# 컨테이너 배포
+# 컨테이너가 존재할 경우에만 실행
+docker stop $CONTAINER_NAME 2>/dev/null || true
+docker rm $CONTAINER_NAME 2>/dev/null || true
+docker run -d --name $CONTAINER_NAME -p 80:80 --restart always $ECR_URI
+
+# 사용하지 않는 이미지 정리(디스크 용량 확보)
+docker image prune -f
