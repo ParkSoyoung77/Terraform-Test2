@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  web:
+    image: 'gitlab/gitlab-ce:latest'
+    restart: always
+    hostnme: '56.155.28.109'   # 호스트의 IP 또는 ALB와 연결된 도메인(+ protocol)
+
+    # 컨테이너 내부 환경 변수
+    environment:
+      GITLAB_OMNIBUS_CONFIG: | # gitlab 설정 파일(gitlab.rb)에 들어갈 내용
+        external_url 'http//56.155.28.109' # 프로토콜을 포함한 호스트의 IP 또는 ALB와 연결된 도메인
+
+        # SSH 포트번호 변경(인스턴스의 SSH와 충돌 방지)
+        gitlab_rails['gitlab_shell_ssh_port'] = 2222 # 보안 그룹의 인바운드 Allow 포트번호와 일치해야 함

@@ -10,10 +10,6 @@ output "internal_alb_sg_id" {
   value = aws_security_group.std17_internal_alb_sg.id
 }
 
-output "mysql_sg_id" {
-  value = aws_security_group.std17_mysql_sg.id
-}
-
 output "gitlab_sg_id" {
   value = aws_security_group.std17_gitlab_sg.id
 }
