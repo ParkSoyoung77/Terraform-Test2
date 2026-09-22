@@ -1,5 +1,5 @@
 provider "aws"{
-    region = "ap-northeast-3"
+    region = "eu-west-2"
     default_tags {
         tags = {
             Class = "bipa17"
