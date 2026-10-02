@@ -57,3 +57,16 @@ module "database" {
     owner               = var.owner
     vpc_cidr            = var.vpc_cidr
 }
+
+# ====================================================
+# Lambda: DB 연결 확인 함수 (VPC 프라이빗 서브넷)
+# ====================================================
+module "lambda" {
+    source = "./modules/lambda"
+
+    private_subnet_ids = module.network.private_subnet_ids
+    security_group_id  = module.security.lambda_sg_id
+    db_secret_arn      = module.database.db_secret_arn
+    db_host            = module.database.proxy_endpoint
+    db_name            = module.database.db_name
+}

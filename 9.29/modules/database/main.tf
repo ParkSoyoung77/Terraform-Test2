@@ -25,7 +25,7 @@ resource "aws_secretsmanager_secret_version" "mysql_password_value" {
     secret_id = aws_secretsmanager_secret.mysql_password.id
     secret_string = jsonencode({
         engine   = "mysql"
-        host     = aws_rds_cluster.std17_mysql_cluster.endpoint
+        host     = aws_db_instance.std17_mysql.address
         database = "testdb"
         username = "std17"
         password = random_password.create_random_password.result
@@ -34,38 +34,30 @@ resource "aws_secretsmanager_secret_version" "mysql_password_value" {
 }
 
 # ================================================================
-# MySQL 클러스터
+# MySQL DB 인스턴스 (단일 AZ)
 # ================================================================
-# RDS MySQL 멀티AZ DB 클러스터
-resource "aws_rds_cluster" "std17_mysql_cluster" {
-    cluster_identifier         = "std17-rds-mysql-multi-az-cluster"
-    engine                     = "mysql"
-    engine_version             = "8.0.46"
-    db_cluster_instance_class  = "db.c6gd.medium"
+resource "aws_db_instance" "std17_mysql" {
+    identifier     = "std17-rds-mysql"
+    engine         = "mysql"
+    engine_version = "8.0.46"
+    instance_class = "db.t3.micro"
 
     # 볼륨 설정
     storage_type      = "gp3"
-    allocated_storage = 100
+    allocated_storage = 20
 
-    database_name   = "testdb"
-    master_username = "std17"
-    master_password = random_password.create_random_password.result
+    db_name  = "testdb"
+    username = "std17"
+    password = random_password.create_random_password.result
 
-    db_subnet_group_name    = aws_db_subnet_group.std17_db_subnet_group.name
-    vpc_security_group_ids  = [ var.mysql_sg_id ]
-    skip_final_snapshot     = true
+    db_subnet_group_name   = aws_db_subnet_group.std17_db_subnet_group.name
+    vpc_security_group_ids = [ var.mysql_sg_id ]
 
-    # 수정할 때 볼륨으로 인한 에러 발생
-    # 이에 최초 생성 이외 apply 때 볼륨 변경을 무시하기 위한 설정
-    lifecycle {
-        ignore_changes = [
-            storage_type,
-            allocated_storage,
-            iops
-        ]
-    }
+    multi_az            = false
+    publicly_accessible = false
+    skip_final_snapshot = true
 
-    tags = { Name = "std17-rds-mysql-multi-az-cluster"}
+    tags = { Name = "std17-rds-mysql" }
 }
 
 # ================================================================
@@ -162,14 +154,10 @@ resource "aws_db_proxy_default_target_group" "proxy_target_group" {
     }
 }
 
-# RDS Proxy와 실제 백엔드 데이터베이스(Aurora Cluster)를 상호 연결
-resource "aws_db_proxy_target" "proxy_target_cluster" {
-    # Proxy와의 연결 구성
-    db_proxy_name = aws_db_proxy.proxy.name
-
-    # proxy_target_group과의 연결 구성
+# RDS Proxy와 실제 백엔드 데이터베이스(단일 인스턴스)를 상호 연결
+resource "aws_db_proxy_target" "proxy_target_instance" {
+    db_proxy_name     = aws_db_proxy.proxy.name
     target_group_name = aws_db_proxy_default_target_group.proxy_target_group.name
 
-    # Databast 연결 구성
-    db_cluster_identifier = aws_rds_cluster.std17_mysql_cluster.id
+    db_instance_identifier = aws_db_instance.std17_mysql.identifier
 }

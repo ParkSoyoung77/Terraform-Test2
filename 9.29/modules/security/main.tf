@@ -208,3 +208,18 @@ resource "aws_security_group" "std17_mysql_sg" {
         Name = "${var.tag_header}mysql-sg"
     }
 }
+
+# Lambda용
+resource "aws_security_group" "std17_lambda_sg" {
+    name   = "${var.tag_header}lambda-sg"
+    vpc_id = var.vpc_id
+
+    egress {
+        from_port   = 0
+        to_port     = 0
+        protocol    = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    tags = { Name = "${var.tag_header}lambda-sg" }
+}
