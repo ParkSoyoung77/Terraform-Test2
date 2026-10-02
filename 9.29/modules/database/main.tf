@@ -1,7 +1,3 @@
-data "aws_availability_zones" "available_az" {
-  state = "available"
-}
-
 resource "aws_db_subnet_group" "std17_db_subnet_group" {
     name       = "std17-db-subnet-group"
     subnet_ids = var.private_subnet_ids
