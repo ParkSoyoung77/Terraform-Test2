@@ -46,3 +46,14 @@ module "compute" {
     gitlab_subnet_id     = module.network.public_subnet_ids[0]
     gitlab_sg_ids        = [module.security.ssh_sg_id, module.security.gitlab_sg_id]
 }
+
+# ====================================================
+# RDS
+# ====================================================
+module "database" {
+    source      = "./modules/database"
+    private_subnet_ids  = module.network.public_subnet_ids
+    mysql_sg_id         = module.security.mysql_sg_id
+    owner               = var.owner
+    vpc_cidr            = var.vpc_cidr
+}
