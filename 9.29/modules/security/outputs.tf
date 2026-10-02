@@ -17,3 +17,7 @@ output "external_alb_sg_id" {
 output "internal_alb_sg_id" {
     value = aws_security_group.internal_alb.id
 }
+
+output "mysql_sg_id" {
+  value = aws_security_group.std17_mysql_sg.id  
+}
