@@ -2,6 +2,7 @@ locals {
   function_name        = "std17-lambda-function"
   s3_function_name     = "std17-s3-bucket-function"
   s3_search_function_name = "std17-s3-bucket-search"
+  s3_create_function_name = "std17-s3-bucket-create"
 }
 
 # ==================================================================
@@ -260,4 +261,95 @@ resource "aws_lambda_function" "std17_s3_bucket_search" {
   ]
 
   tags = { Name = local.s3_search_function_name }
+}
+
+# ==================================================================
+# [S3 생성 함수] 배포 패키지
+# ==================================================================
+
+data "archive_file" "std17_s3_bucket_create_zip" {
+  type        = "zip"
+  source_file = "${path.module}/s3_function/std17_s3_bucket_create.py"
+  output_path = "${path.module}/build/std17_s3_bucket_create.zip"
+}
+
+# ==================================================================
+# [S3 생성 함수] IAM 역할 / 권한 (생성 권한은 이 함수에만 부여)
+# ==================================================================
+
+resource "aws_iam_role" "std17_s3_bucket_create_role" {
+  name = "std17-s3-bucket-create-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "lambda.amazonaws.com" }
+        Action    = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = { Name = "std17-s3-bucket-create-role" }
+}
+
+# CloudWatch Logs 기록 권한
+resource "aws_iam_role_policy_attachment" "std17_s3_bucket_create_basic" {
+  role       = aws_iam_role.std17_s3_bucket_create_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# 버킷 생성 권한 — "std17-" 으로 시작하는 버킷만 허용
+resource "aws_iam_role_policy" "std17_s3_bucket_create_access" {
+  name = "std17-s3-bucket-create-access"
+  role = aws_iam_role.std17_s3_bucket_create_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "CreateStd17Buckets"
+        Effect   = "Allow"
+        Action   = ["s3:CreateBucket"]
+        Resource = "arn:aws:s3:::std17-*"
+      },
+      {
+        # 생성 전 존재 여부 확인(head_bucket)용
+        Sid      = "CheckStd17Buckets"
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = "arn:aws:s3:::std17-*"
+      }
+    ]
+  })
+}
+
+# ==================================================================
+# [S3 생성 함수] Lambda 함수
+# ==================================================================
+
+resource "aws_cloudwatch_log_group" "std17_s3_bucket_create" {
+  name              = "/aws/lambda/${local.s3_create_function_name}"
+  retention_in_days = 7
+}
+
+resource "aws_lambda_function" "std17_s3_bucket_create" {
+  function_name = local.s3_create_function_name
+  role          = aws_iam_role.std17_s3_bucket_create_role.arn
+
+  filename         = data.archive_file.std17_s3_bucket_create_zip.output_path
+  source_code_hash = data.archive_file.std17_s3_bucket_create_zip.output_base64sha256
+
+  handler = "std17_s3_bucket_create.lambda_handler"
+  runtime = "python3.14"
+  timeout = 10
+
+  depends_on = [
+    aws_iam_role_policy_attachment.std17_s3_bucket_create_basic,
+    aws_iam_role_policy.std17_s3_bucket_create_access,
+    aws_cloudwatch_log_group.std17_s3_bucket_create,
+  ]
+
+  tags = { Name = local.s3_create_function_name }
 }

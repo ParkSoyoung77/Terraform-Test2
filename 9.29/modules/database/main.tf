@@ -145,6 +145,10 @@ resource "aws_db_proxy" "proxy" {
 
         # 사용할 Secrets Manager 설정(ARN)
         secret_arn = aws_secretsmanager_secret.mysql_password.arn
+
+        # 클라이언트 → 프록시 비밀번호 인증 방식
+        # 생략 시 AWS가 기본값을 채워 넣어 plan마다 변경으로 표시되므로 명시
+        client_password_auth_type = "MYSQL_NATIVE_PASSWORD"
     }
 
     tags = {Name = "${local.tag_header}rds-mysql-cluster-proxy"}
