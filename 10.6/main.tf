@@ -79,7 +79,7 @@ module "lambda" {
     # S3 버킷 함수
     s3_bucket_name = module.storage.bucket_name
 
-    secret_name = module.secrets.secret_name
+    secret_name = module.database.secret_name
 }
 
 
