@@ -1,6 +1,6 @@
 variable "azs" {
     type        = list(string)
-    default     = ["ap-northeast-3a", "ap-northeast-3b", "ap-northeast-3c"]
+    default     = ["eu-west-2a", "eu-west-2b", "eu-west-2c"]
 }
 
 variable "mysql_sg_id" {
@@ -10,7 +10,7 @@ variable "mysql_sg_id" {
 variable "aws_region" {
     description = "리소스를 생성할 AWS 리전"
     type        = string
-    default     = "ap-northeast-3"
+    default     = "eu-west-2"
 }
 
 variable "private_subnet_ids" {

@@ -1,6 +1,15 @@
+# ================================================================
+# DB 서브넷 그룹
+# ================================================================
 resource "aws_db_subnet_group" "std17_db_subnet_group" {
-    name       = "std17-db-subnet-group"
-    subnet_ids = var.private_subnet_ids
+    # 고정 이름 대신 접두사 사용 → 교체 시 새 이름으로 먼저 생성 가능
+    name_prefix = "std17-db-subnet-group-"
+    subnet_ids  = var.private_subnet_ids
+
+    # 사용 중인 서브넷 그룹은 수정 불가 → 새로 만든 후 기존 것 삭제
+    lifecycle {
+        create_before_destroy = true
+    }
 
     tags = { Name = "std17-db-subnet-group" }
 }
@@ -9,14 +18,14 @@ resource "aws_db_subnet_group" "std17_db_subnet_group" {
 # 보안 암호 생성
 # ================================================================
 resource "random_password" "create_random_password" {
-  length            = 16
-  special           = true
-  override_special  = "!#$%^&*()-_=+[]{}<>:?"
+    length           = 16
+    special          = true
+    override_special = "!#$%^&*()-_=+[]{}<>:?"
 }
 
 resource "aws_secretsmanager_secret" "mysql_password" {
-    description = "RDS 데이터베이스 비밀번호"
-    name        = "project/db/password"
+    description             = "RDS 데이터베이스 비밀번호"
+    name                    = "project/db/password"
     recovery_window_in_days = 0 # 삭제 시 즉시 삭제, 대기기간 없음
 }
 
@@ -56,6 +65,11 @@ resource "aws_db_instance" "std17_mysql" {
     multi_az            = false
     publicly_accessible = false
     skip_final_snapshot = true
+
+    # 서브넷 그룹 교체 시 DB도 재생성 (같은 VPC 내 서브넷 그룹 이동 불가)
+    lifecycle {
+        replace_triggered_by = [aws_db_subnet_group.std17_db_subnet_group.id]
+    }
 
     tags = { Name = "std17-rds-mysql" }
 }
@@ -145,12 +159,17 @@ resource "aws_db_proxy_default_target_group" "proxy_target_group" {
         # 로그인 유지 시간(초)
         connection_borrow_timeout = 300
 
-        # 최대 연결 수 
+        # 최대 연결 수
         # 데이터베이스의 최대 연결 허용치에 대한 비율을 정의
         max_connections_percent = 100
 
         # 최대 연결 수 중 idle 상태의 연결을 유지시킬 비율
         max_idle_connections_percent = 50
+    }
+
+    # Proxy 재생성 시 타겟 그룹 설정도 다시 적용
+    lifecycle {
+        replace_triggered_by = [aws_db_proxy.proxy.id]
     }
 }
 
@@ -160,4 +179,12 @@ resource "aws_db_proxy_target" "proxy_target_instance" {
     target_group_name = aws_db_proxy_default_target_group.proxy_target_group.name
 
     db_instance_identifier = aws_db_instance.std17_mysql.identifier
+
+    # Proxy 또는 DB가 재생성되면 타겟 재등록
+    lifecycle {
+        replace_triggered_by = [
+            aws_db_proxy.proxy.id,
+            aws_db_instance.std17_mysql.id,
+        ]
+    }
 }
