@@ -1,6 +1,7 @@
 locals {
-  s3_function_name = "std17-s3-bucket-function"
-  object_list_name  = "std17-object-list"
+  s3_function_name    = "std17-s3-bucket-function"
+  object_list_name    = "std17-object-list"
+  secret_load_name    = "std17-secretmanager-load"
 }
 
 # locals {
@@ -559,4 +560,95 @@ resource "aws_lambda_function" "std17_object_list" {
   ]
 
   tags = { Name = local.object_list_name }
+}
+
+# ==================================================================
+# [시크릿 조회 함수] 배포 패키지
+# ==================================================================
+
+data "archive_file" "std17_secretmanager_load_zip" {
+  type        = "zip"
+  source_file = "${path.module}/s3_function/std17_secretmanager_load.py"
+  output_path = "${path.module}/build/std17_secretmanager_load.zip"
+}
+
+# ==================================================================
+# [시크릿 조회 함수] IAM 역할 / 권한 (지정한 시크릿 읽기만 허용)
+# ==================================================================
+
+resource "aws_iam_role" "std17_secretmanager_load_role" {
+  name = "std17-secretmanager-load-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "lambda.amazonaws.com" }
+        Action    = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = { Name = "std17-secretmanager-load-role" }
+}
+
+# CloudWatch Logs 기록 권한
+resource "aws_iam_role_policy_attachment" "std17_secretmanager_load_basic" {
+  role       = aws_iam_role.std17_secretmanager_load_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# 시크릿 읽기 권한
+# 시크릿 ARN 끝에는 AWS가 붙이는 랜덤 6자리(-AbCdEf)가 있어서 "-*" 로 매칭
+resource "aws_iam_role_policy" "std17_secretmanager_load_access" {
+  name = "std17-secretmanager-load-access"
+  role = aws_iam_role.std17_secretmanager_load_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "ReadSecret"
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
+        Resource = "arn:aws:secretsmanager:*:*:secret:${var.secret_name}-*"
+      }
+    ]
+  })
+}
+
+# ==================================================================
+# [시크릿 조회 함수] Lambda 함수
+# ==================================================================
+
+resource "aws_cloudwatch_log_group" "std17_secretmanager_load" {
+  name              = "/aws/lambda/${local.secret_load_name}"
+  retention_in_days = 7
+}
+
+resource "aws_lambda_function" "std17_secretmanager_load" {
+  function_name = local.secret_load_name
+  role          = aws_iam_role.std17_secretmanager_load_role.arn
+
+  filename         = data.archive_file.std17_secretmanager_load_zip.output_path
+  source_code_hash = data.archive_file.std17_secretmanager_load_zip.output_base64sha256
+
+  handler = "std17_secretmanager_load.lambda_handler"
+  runtime = "python3.14"
+  timeout = 10
+
+  environment {
+    variables = {
+      SECRET_NAME = var.secret_name
+    }
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.std17_secretmanager_load_basic,
+    aws_iam_role_policy.std17_secretmanager_load_access,
+    aws_cloudwatch_log_group.std17_secretmanager_load,
+  ]
+
+  tags = { Name = local.secret_load_name }
 }

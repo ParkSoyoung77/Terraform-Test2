@@ -192,3 +192,32 @@
 #         ]
 #     }
 # }
+
+# ================================================================
+# 보안 암호 생성
+# ================================================================
+resource "random_password" "create_random_password" {
+    length           = 16
+    special          = true
+    override_special = "!#$%^&*()-_=+[]{}<>:?"
+}
+
+resource "aws_secretsmanager_secret" "mysql_password" {
+    description             = "DB 접속 정보 (RDS 없이 단독 생성)"
+    name                    = var.secret_name
+    recovery_window_in_days = 0 # 삭제 시 즉시 삭제, 대기기간 없음
+
+    tags = { Name = var.secret_name }
+}
+
+# 보안 암호에 실제 사용할 값 정의 (RDS가 없으므로 host 제외)
+resource "aws_secretsmanager_secret_version" "mysql_password_value" {
+    secret_id = aws_secretsmanager_secret.mysql_password.id
+    secret_string = jsonencode({
+        engine   = "mysql"
+        database = "testdb"
+        username = "std17"
+        password = random_password.create_random_password.result
+        port     = 3306
+    })
+}

@@ -29,3 +29,9 @@
 # variable "vpc_cidr" {
 #   type = string
 # }
+
+variable "secret_name" {
+    description = "Secrets Manager 시크릿 이름"
+    type        = string
+    default     = "project/db/password"
+}

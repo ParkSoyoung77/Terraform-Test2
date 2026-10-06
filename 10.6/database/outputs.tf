@@ -14,3 +14,11 @@
 # output "db_name" {
 #     value = aws_db_instance.std17_mysql.db_name
 # }
+
+output "secret_name" {
+    value = aws_secretsmanager_secret.mysql_password.name
+}
+
+output "secret_arn" {
+    value = aws_secretsmanager_secret.mysql_password.arn
+}

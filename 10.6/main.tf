@@ -45,14 +45,14 @@ module "security" {
 # ====================================================
 # RDS (MySQL 단일 AZ + RDS Proxy) — 프라이빗 서브넷에 배치
 # ====================================================
-# module "database" {
-#     source = "./modules/database"
+module "database" {
+    source = "./modules/database"
 
 #     private_subnet_ids = module.network.private_subnet_ids   # 수정: public → private
 #     mysql_sg_id        = module.security.mysql_sg_id
 #     owner              = var.owner
 #     vpc_cidr           = var.vpc_cidr
-# }
+}
 
 # ====================================================
 # S3: 정적 웹사이트 버킷 + EC2 백업용 IAM 역할
@@ -78,6 +78,8 @@ module "lambda" {
 
     # S3 버킷 함수
     s3_bucket_name = module.storage.bucket_name
+
+    secret_name = module.secrets.secret_name
 }
 
 
