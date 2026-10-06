@@ -25,3 +25,7 @@ def lambda_handler(event, context):
         }
 
     # 버킷의 존재 유무 및 권한 확인 후 추가 실행문 작성(exists, error_code)
+    return {
+        'statusCode': 200,
+        'body': f"Bucket 'std17-eu-west-2-bucket' exists: {exists}"
+    }
