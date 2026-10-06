@@ -449,4 +449,15 @@ resource "aws_lambda_function" "std17_s3_bucket_delete" {
 
   environment {
     variables = {
-      PROTECTED_BUCKET =
+      PROTECTED_BUCKET = var.s3_bucket_name
+    }
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.std17_s3_bucket_delete_basic,
+    aws_iam_role_policy.std17_s3_bucket_delete_access,
+    aws_cloudwatch_log_group.std17_s3_bucket_delete,
+  ]
+
+  tags = { Name = local.s3_delete_function_name }
+}
