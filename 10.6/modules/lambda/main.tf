@@ -1,5 +1,6 @@
 locals {
   s3_function_name = "std17-s3-bucket-function"
+  object_list_name  = "std17-object-list"
 }
 
 # locals {
@@ -468,3 +469,94 @@ resource "aws_lambda_function" "std17_s3_bucket_function" {
 
 #   tags = { Name = local.s3_delete_function_name }
 # }
+
+# ==================================================================
+# [객체 목록 함수] 배포 패키지
+# ==================================================================
+
+data "archive_file" "std17_object_list_zip" {
+  type        = "zip"
+  source_file = "${path.module}/s3_function/std17_object_list.py"
+  output_path = "${path.module}/build/std17_object_list.zip"
+}
+
+# ==================================================================
+# [객체 목록 함수] IAM 역할 / 권한 (읽기 전용)
+# ==================================================================
+
+resource "aws_iam_role" "std17_object_list_role" {
+  name = "std17-object-list-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "lambda.amazonaws.com" }
+        Action    = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = { Name = "std17-object-list-role" }
+}
+
+# CloudWatch Logs 기록 권한
+resource "aws_iam_role_policy_attachment" "std17_object_list_basic" {
+  role       = aws_iam_role.std17_object_list_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# 객체 목록 조회 권한 — "std17-" 버킷만, 읽기만 허용
+resource "aws_iam_role_policy" "std17_object_list_access" {
+  name = "std17-object-list-access"
+  role = aws_iam_role.std17_object_list_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        # list_objects_v2() 호출용
+        Sid      = "ListStd17Buckets"
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = "arn:aws:s3:::std17-*"
+      }
+    ]
+  })
+}
+
+# ==================================================================
+# [객체 목록 함수] Lambda 함수
+# ==================================================================
+
+resource "aws_cloudwatch_log_group" "std17_object_list" {
+  name              = "/aws/lambda/${local.object_list_name}"
+  retention_in_days = 7
+}
+
+resource "aws_lambda_function" "std17_object_list" {
+  function_name = local.object_list_name
+  role          = aws_iam_role.std17_object_list_role.arn
+
+  filename         = data.archive_file.std17_object_list_zip.output_path
+  source_code_hash = data.archive_file.std17_object_list_zip.output_base64sha256
+
+  handler = "std17_object_list.lambda_handler"
+  runtime = "python3.14"
+  timeout = 10
+
+  environment {
+    variables = {
+      BUCKET_NAME = var.s3_bucket_name
+    }
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.std17_object_list_basic,
+    aws_iam_role_policy.std17_object_list_access,
+    aws_cloudwatch_log_group.std17_object_list,
+  ]
+
+  tags = { Name = local.object_list_name }
+}
