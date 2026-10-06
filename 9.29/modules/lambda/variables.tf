@@ -22,3 +22,8 @@ variable "db_name" {
     description = "접속할 데이터베이스 이름"
     type        = string
 }
+
+variable "s3_bucket_name" {
+  description = "S3 함수가 접근할 버킷 이름"
+  type        = string
+}

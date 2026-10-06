@@ -21,3 +21,8 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "s3_bucket_name" {
+  description = "S3 함수가 접근할 버킷 이름"
+  type        = string
+}

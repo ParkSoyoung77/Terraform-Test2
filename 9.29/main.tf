@@ -2,7 +2,7 @@
 # 공통 값 — 이름 접두사를 한 곳에서 만들어 모든 모듈에 동일하게 전달
 # ====================================================
 locals {
-    tag_header = var.owner == "" ? "" : "${var.owner}-" # 예: "std17-"
+    tag_header = var.owner == "" ? "" : "${var.owner}-"
 }
 
 # ====================================================
@@ -16,7 +16,7 @@ module "network" {
 }
 
 # ====================================================
-# 보안 그룹: NAT / GitLab / SSH / ALB
+# 보안 그룹: NAT / GitLab / SSH / ALB / MySQL / Lambda
 # ====================================================
 module "security" {
     source = "./modules/security"
@@ -48,25 +48,37 @@ module "compute" {
 }
 
 # ====================================================
-# RDS
+# RDS (MySQL 단일 AZ + RDS Proxy) — 프라이빗 서브넷에 배치
 # ====================================================
 module "database" {
-    source      = "./modules/database"
-    private_subnet_ids  = module.network.public_subnet_ids
-    mysql_sg_id         = module.security.mysql_sg_id
-    owner               = var.owner
-    vpc_cidr            = var.vpc_cidr
+    source = "./modules/database"
+
+    private_subnet_ids = module.network.private_subnet_ids   # 수정: public → private
+    mysql_sg_id        = module.security.mysql_sg_id
+    owner              = var.owner
+    vpc_cidr           = var.vpc_cidr
 }
 
 # ====================================================
-# Lambda: DB 연결 확인 함수 (VPC 프라이빗 서브넷)
+# S3: 정적 웹사이트 버킷 + EC2 백업용 IAM 역할
+# ====================================================
+module "storage" {
+    source = "./modules/storage"
+}
+
+# ====================================================
+# Lambda: DB 연결 확인 함수 (VPC) + S3 버킷 함수
 # ====================================================
 module "lambda" {
     source = "./modules/lambda"
 
+    # DB 확인 함수
     private_subnet_ids = module.network.private_subnet_ids
     security_group_id  = module.security.lambda_sg_id
     db_secret_arn      = module.database.db_secret_arn
     db_host            = module.database.proxy_endpoint
     db_name            = module.database.db_name
+
+    # S3 버킷 함수
+    s3_bucket_name = module.storage.bucket_name
 }

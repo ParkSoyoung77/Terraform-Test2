@@ -14,7 +14,7 @@ resource "aws_iam_role" "std17_s3_fullaccess_role" {
     }]
   })
 
-  tags = merge({ Name = var.fullaccess_role_name }, var.tags)
+  tags = merge(var.tags, { Name = var.fullaccess_role_name })   # Name이 덮어써지지 않도록 순서 변경
 }
 
 resource "aws_iam_role_policy_attachment" "std17_s3_fullaccess_attach" {
