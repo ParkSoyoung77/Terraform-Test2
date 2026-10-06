@@ -1,8 +1,9 @@
 locals {
-  function_name        = "std17-lambda-function"
-  s3_function_name     = "std17-s3-bucket-function"
+  function_name           = "std17-lambda-function"
+  s3_function_name        = "std17-s3-bucket-function"
   s3_search_function_name = "std17-s3-bucket-search"
   s3_create_function_name = "std17-s3-bucket-create"
+  s3_delete_function_name = "std17-s3-bucket-delete"
 }
 
 # ==================================================================
@@ -353,3 +354,99 @@ resource "aws_lambda_function" "std17_s3_bucket_create" {
 
   tags = { Name = local.s3_create_function_name }
 }
+
+# ==================================================================
+# [S3 삭제 함수] 배포 패키지
+# ==================================================================
+
+data "archive_file" "std17_s3_bucket_delete_zip" {
+  type        = "zip"
+  source_file = "${path.module}/s3_function/std17_s3_bucket_delete.py"
+  output_path = "${path.module}/build/std17_s3_bucket_delete.zip"
+}
+
+# ==================================================================
+# [S3 삭제 함수] IAM 역할 / 권한 (삭제 권한은 이 함수에만 부여)
+# ==================================================================
+
+resource "aws_iam_role" "std17_s3_bucket_delete_role" {
+  name = "std17-s3-bucket-delete-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "lambda.amazonaws.com" }
+        Action    = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = { Name = "std17-s3-bucket-delete-role" }
+}
+
+# CloudWatch Logs 기록 권한
+resource "aws_iam_role_policy_attachment" "std17_s3_bucket_delete_basic" {
+  role       = aws_iam_role.std17_s3_bucket_delete_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# 버킷 삭제 권한 — "std17-" 버킷만 허용, Terraform 관리 버킷은 명시적 거부
+resource "aws_iam_role_policy" "std17_s3_bucket_delete_access" {
+  name = "std17-s3-bucket-delete-access"
+  role = aws_iam_role.std17_s3_bucket_delete_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        # 버킷 비우기용: 객체 목록 조회 + 객체 삭제
+        Sid      = "EmptyStd17Buckets"
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket", "s3:DeleteObject"]
+        Resource = ["arn:aws:s3:::std17-*", "arn:aws:s3:::std17-*/*"]
+      },
+      {
+        Sid      = "DeleteStd17Buckets"
+        Effect   = "Allow"
+        Action   = ["s3:DeleteBucket"]
+        Resource = "arn:aws:s3:::std17-*"
+      },
+      {
+        # Deny는 Allow보다 우선 → 기본 버킷은 어떤 경우에도 비우기/삭제 불가
+        Sid    = "ProtectTerraformBucket"
+        Effect = "Deny"
+        Action = ["s3:DeleteBucket", "s3:DeleteObject"]
+        Resource = [
+          "arn:aws:s3:::${var.s3_bucket_name}",
+          "arn:aws:s3:::${var.s3_bucket_name}/*"
+        ]
+      }
+    ]
+  })
+}
+
+# ==================================================================
+# [S3 삭제 함수] Lambda 함수
+# ==================================================================
+
+resource "aws_cloudwatch_log_group" "std17_s3_bucket_delete" {
+  name              = "/aws/lambda/${local.s3_delete_function_name}"
+  retention_in_days = 7
+}
+
+resource "aws_lambda_function" "std17_s3_bucket_delete" {
+  function_name = local.s3_delete_function_name
+  role          = aws_iam_role.std17_s3_bucket_delete_role.arn
+
+  filename         = data.archive_file.std17_s3_bucket_delete_zip.output_path
+  source_code_hash = data.archive_file.std17_s3_bucket_delete_zip.output_base64sha256
+
+  handler = "std17_s3_bucket_delete.lambda_handler"
+  runtime = "python3.14"
+  timeout = 60   # 객체가 많은 버킷을 비우는 시간 고려
+
+  environment {
+    variables = {
+      PROTECTED_BUCKET =
