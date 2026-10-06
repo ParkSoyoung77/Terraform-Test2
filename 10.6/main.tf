@@ -59,6 +59,8 @@ module "security" {
 # ====================================================
 module "storage" {
     source = "./modules/storage"
+
+    api_endpoint = module.apigateway.api_endpoint
 }
 
 # ====================================================
@@ -76,4 +78,22 @@ module "lambda" {
 
     # S3 버킷 함수
     s3_bucket_name = module.storage.bucket_name
+}
+
+
+# ====================================================
+# API Gateway: 브라우저 → Lambda 호출 주소
+# ====================================================
+module "apigateway" {
+    source = "./modules/apigateway"
+
+    tag_header = local.tag_header
+
+    routes = {
+        delete_bucket = {
+            route_key     = "GET /bucket/delete"
+            function_name = module.lambda.s3_function_name
+            invoke_arn    = module.lambda.s3_function_invoke_arn
+        }
+    }
 }

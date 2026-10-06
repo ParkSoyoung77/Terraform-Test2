@@ -1,10 +1,14 @@
 locals {
-  function_name           = "std17-lambda-function"
-  s3_function_name        = "std17-s3-bucket-function"
-  s3_search_function_name = "std17-s3-bucket-search"
-  s3_create_function_name = "std17-s3-bucket-create"
-  s3_delete_function_name = "std17-s3-bucket-delete"
+  s3_function_name = "std17-s3-bucket-function"
 }
+
+# locals {
+#   function_name           = "std17-lambda-function"
+#   s3_function_name        = "std17-s3-bucket-function"
+#   s3_search_function_name = "std17-s3-bucket-search"
+#   s3_create_function_name = "std17-s3-bucket-create"
+#   s3_delete_function_name = "std17-s3-bucket-delete"
+# }
 
 # # ==================================================================
 # # Lambda 배포 패키지 빌드 (pymysql은 기본 런타임에 없으므로 함께 패키징)
@@ -126,6 +130,7 @@ data "archive_file" "std17_s3_bucket_function_zip" {
   output_path = "${path.module}/build/std17_s3_bucket_function.zip"
 }
 
+
 # ==================================================================
 # [S3 함수] IAM 역할 / 권한
 # ==================================================================
@@ -153,7 +158,7 @@ resource "aws_iam_role_policy_attachment" "std17_s3_bucket_function_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# 대상 버킷 접근 권한
+# 버킷 삭제 권한 — "std17-" 버킷만 허용, Terraform 관리 버킷은 명시적 거부
 resource "aws_iam_role_policy" "std17_s3_bucket_function_s3_access" {
   name = "std17-s3-bucket-function-s3-access"
   role = aws_iam_role.std17_s3_bucket_function_role.id
@@ -162,23 +167,25 @@ resource "aws_iam_role_policy" "std17_s3_bucket_function_s3_access" {
     Version = "2012-10-17"
     Statement = [
       {
-        # list_buckets() 호출용 — 버킷 단위로 제한 불가하여 "*" 사용
-        Sid      = "ListAllBuckets"
+        Sid      = "EmptyStd17Buckets"
         Effect   = "Allow"
-        Action   = ["s3:ListAllMyBuckets"]
-        Resource = "*"
+        Action   = ["s3:ListBucket", "s3:DeleteObject"]
+        Resource = ["arn:aws:s3:::std17-*", "arn:aws:s3:::std17-*/*"]
       },
       {
-        Sid      = "ListBucket"
+        Sid      = "DeleteStd17Buckets"
         Effect   = "Allow"
-        Action   = ["s3:ListBucket"]
-        Resource = "arn:aws:s3:::${var.s3_bucket_name}"
+        Action   = ["s3:DeleteBucket"]
+        Resource = "arn:aws:s3:::std17-*"
       },
       {
-        Sid      = "ObjectAccess"
-        Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:PutObject"]
-        Resource = "arn:aws:s3:::${var.s3_bucket_name}/*"
+        Sid    = "ProtectTerraformBucket"
+        Effect = "Deny"
+        Action = ["s3:DeleteBucket", "s3:DeleteObject"]
+        Resource = [
+          "arn:aws:s3:::${var.s3_bucket_name}",
+          "arn:aws:s3:::${var.s3_bucket_name}/*"
+        ]
       }
     ]
   })
@@ -202,7 +209,7 @@ resource "aws_lambda_function" "std17_s3_bucket_function" {
 
   handler = "std17_s3_bucket_function.lambda_handler"
   runtime = "python3.14"
-  timeout = 10
+  timeout = 60
 
   environment {
     variables = {

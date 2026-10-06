@@ -42,3 +42,23 @@ resource "aws_s3_bucket_policy" "std17_s3_bucket_policy" {
 
     depends_on = [aws_s3_bucket_public_access_block.std17_s3_bucket_access]
 }
+
+# ==================================================================
+# 웹사이트 파일 업로드 (index.html 에 API 주소를 넣어서 업로드)
+# ==================================================================
+resource "aws_s3_object" "index_html" {
+  bucket       = aws_s3_bucket.std17_s3_bucket.id
+  key          = "index.html"
+  content_type = "text/html; charset=utf-8"
+  content      = templatefile("${path.module}/web/index.html.tftpl", {
+    api_endpoint = var.api_endpoint
+  })
+}
+
+resource "aws_s3_object" "error_html" {
+  bucket       = aws_s3_bucket.std17_s3_bucket.id
+  key          = "error.html"
+  content_type = "text/html; charset=utf-8"
+  source       = "${path.module}/web/error.html"
+  etag         = filemd5("${path.module}/web/error.html")
+}
