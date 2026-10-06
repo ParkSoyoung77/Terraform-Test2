@@ -14,8 +14,11 @@ def lambda_handler(event, context):
     # 즉, response가 'Contents'라는 것은 객체가 존재한다는 것을 말함.
     result = []
     if "Contents" in response:
-        result = [ obj["Key"] for obj in response["Contents"] ]
+        result = [ obj["Key"] for obj in response["Contents"] if not obj["Key"].endswith("/")]
 
+    result = {
+        "files": file_list
+    }
     return{
         'statusCode': 200,
         'body': result
