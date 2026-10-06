@@ -1,12 +1,12 @@
 module "network" {
-    source = "./network"
+    source = "./modules/network"
 
     owner    = var.owner
     vpc_cidr = var.vpc_cidr
 }
 
 module "security" {
-    source = "./security"
+    source = "./modules/security"
 
     vpc_id     = module.network.vpc_id
     vpc_cidr   = var.vpc_cidr
@@ -14,7 +14,7 @@ module "security" {
 }
 
 module "compute" {
-    source = "./compute"
+    source = "./modules/compute"
 
     aws_region               = var.aws_region
     tag_header               = var.tag_header
