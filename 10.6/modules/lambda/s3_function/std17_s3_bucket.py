@@ -9,6 +9,7 @@ s3_client = boto3.client('s3', region_name='eu-west-2')
 
 # 버킷 이름 출력하기
 def lambda_handler(event, context):
+        # cors_headers 사용
         # AWS 계정에 존재하는 모든 S3 버킷의 목록 조회
         response = s3_client.list_buckets()
         bucket_names = [bucket['Name'] for bucket in response['Buckets']]
