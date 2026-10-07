@@ -52,9 +52,8 @@ resource "aws_s3_bucket_policy" "std17_s3_bucket_policy" {
 
 # ==================================================================
 # 웹사이트 파일 업로드
-#   index.html : S3 파일 목록 페이지  (파일 클릭 → read.html 로 이동)
-#   read.html  : S3 파일 읽기 페이지  (목록 보기 → index.html 로 이동)
-#   두 페이지 모두 Lambda 함수 URL 기본값을 templatefile 로 주입
+#   index.html : S3 파일 목록 페이지
+#   페이지 Lambda 함수 URL 기본값을 templatefile 로 주입
 # ==================================================================
 resource "aws_s3_object" "index_html" {
   bucket        = aws_s3_bucket.std17_s3_bucket.id
@@ -62,16 +61,6 @@ resource "aws_s3_object" "index_html" {
   content_type  = "text/html; charset=utf-8"
   cache_control = "no-cache" # 재배포 후 바로 새 페이지가 보이도록
   content = templatefile("${local.web_dir}/index.html.tftpl", {
-    api_endpoint = var.api_endpoint
-  })
-}
-
-resource "aws_s3_object" "read_html" {
-  bucket        = aws_s3_bucket.std17_s3_bucket.id
-  key           = "read.html"
-  content_type  = "text/html; charset=utf-8"
-  cache_control = "no-cache"
-  content = templatefile("${local.web_dir}/read.html.tftpl", {
     api_endpoint = var.api_endpoint
   })
 }
