@@ -1,16 +1,29 @@
-# AWS 관리형 정책 연결
-locals {
-  std17_s3_bucket_function_managed_policies = toset([
-    "arn:aws:iam::aws:policy/AmazonRDSDataFullAccess",
-    "arn:aws:iam::aws:policy/AmazonS3FullAccess",
-    "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
-    "arn:aws:iam::aws:policy/SecretsManagerReadWrite",
-  ])
+# ==================================================================
+# EC2용 S3 FullAccess 역할 + 인스턴스 프로파일
+# ==================================================================
+resource "aws_iam_role" "std17_s3_fullaccess_role" {
+  name = "std17-s3-fullaccess-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "ec2.amazonaws.com" }
+        Action    = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = { Name = "std17-s3-fullaccess-role" }
 }
 
-resource "aws_iam_role_policy_attachment" "std17_s3_bucket_function_managed" {
-  for_each = local.std17_s3_bucket_function_managed_policies
+resource "aws_iam_role_policy_attachment" "std17_s3_fullaccess_attach" {
+  role       = aws_iam_role.std17_s3_fullaccess_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+}
 
-  role       = aws_iam_role.std17_s3_bucket_function_role.name
-  policy_arn = each.value
+resource "aws_iam_instance_profile" "std17_s3_fullaccess_profile" {
+  name = "std17-s3-fullaccess-profile"
+  role = aws_iam_role.std17_s3_fullaccess_role.name
 }

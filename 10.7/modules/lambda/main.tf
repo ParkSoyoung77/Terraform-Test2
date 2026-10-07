@@ -1,24 +1,21 @@
 locals {
-  s3_function_name    = "std17-s3-bucket-function"
+  object_read_function_name = "std17-object-read"
 }
 
 # ==================================================================
-# [S3 함수] 배포 패키지 (boto3는 런타임 기본 포함 → 별도 설치 불필요)
+# [오브젝트 읽기 함수] 배포 패키지 — 파일 목록(action=list) / 파일 읽기(action=read)
 # ==================================================================
-
-data "archive_file" "std17_s3_bucket_function_zip" {
+data "archive_file" "std17_object_read_zip" {
   type        = "zip"
-  source_file = "${path.module}/s3_function/std17_s3_bucket_function.py"
-  output_path = "${path.module}/build/std17_s3_bucket_function.zip"
+  source_file = "${path.module}/s3_function/std17_object_read.py"
+  output_path = "${path.module}/build/std17_object_read.zip"
 }
 
-
 # ==================================================================
-# [S3 함수] IAM 역할 / 권한
+# [오브젝트 읽기 함수] IAM 역할 / 권한 (읽기 전용)
 # ==================================================================
-
-resource "aws_iam_role" "std17_s3_bucket_function_role" {
-  name = "std17-s3-bucket-function-role"
+resource "aws_iam_role" "std17_object_read_role" {
+  name = "std17-object-read-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -31,41 +28,36 @@ resource "aws_iam_role" "std17_s3_bucket_function_role" {
     ]
   })
 
-  tags = { Name = "std17-s3-bucket-function-role" }
+  tags = { Name = "std17-object-read-role" }
 }
 
-# CloudWatch Logs 기록 권한
-resource "aws_iam_role_policy_attachment" "std17_s3_bucket_function_basic" {
-  role       = aws_iam_role.std17_s3_bucket_function_role.name
+resource "aws_iam_role_policy_attachment" "std17_object_read_basic" {
+  role       = aws_iam_role.std17_object_read_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# 버킷 삭제 권한 — "std17-" 버킷만 허용, Terraform 관리 버킷은 명시적 거부
-resource "aws_iam_role_policy" "std17_s3_bucket_function_s3_access" {
-  name = "std17-s3-bucket-function-s3-access"
-  role = aws_iam_role.std17_s3_bucket_function_role.id
+resource "aws_iam_role_policy" "std17_object_read_s3_access" {
+  name = "std17-object-read-s3-access"
+  role = aws_iam_role.std17_object_read_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Sid      = "EmptyStd17Buckets"
-        Effect   = "Allow"
-        Action   = ["s3:ListBucket", "s3:DeleteObject"]
-        Resource = ["arn:aws:s3:::std17-*", "arn:aws:s3:::std17-*/*"]
-      },
-      {
-        Sid      = "DeleteStd17Buckets"
-        Effect   = "Allow"
-        Action   = ["s3:DeleteBucket"]
-        Resource = "arn:aws:s3:::std17-*"
-      },
-      {
-        Sid    = "ProtectTerraformBucket"
-        Effect = "Deny"
-        Action = ["s3:DeleteBucket", "s3:DeleteObject"]
+        Sid    = "ListStd17Buckets"
+        Effect = "Allow"
+        Action = ["s3:ListBucket"]
         Resource = [
-          "arn:aws:s3:::${var.s3_bucket_name}",
+          "arn:aws:s3:::std17-*",
+          "arn:aws:s3:::${var.s3_bucket_name}"
+        ]
+      },
+      {
+        Sid    = "ReadStd17Objects"
+        Effect = "Allow"
+        Action = ["s3:GetObject"]
+        Resource = [
+          "arn:aws:s3:::std17-*/*",
           "arn:aws:s3:::${var.s3_bucket_name}/*"
         ]
       }
@@ -74,36 +66,55 @@ resource "aws_iam_role_policy" "std17_s3_bucket_function_s3_access" {
 }
 
 # ==================================================================
-# [S3 함수] Lambda 함수
+# [오브젝트 읽기 함수] Lambda 함수
 # ==================================================================
-
-resource "aws_cloudwatch_log_group" "std17_s3_bucket_function" {
-  name              = "/aws/lambda/${local.s3_function_name}"
+resource "aws_cloudwatch_log_group" "std17_object_read" {
+  name              = "/aws/lambda/${local.object_read_function_name}"
   retention_in_days = 7
 }
 
-resource "aws_lambda_function" "std17_s3_bucket_function" {
-  function_name = local.s3_function_name
-  role          = aws_iam_role.std17_s3_bucket_function_role.arn
+resource "aws_lambda_function" "std17_object_read" {
+  function_name = local.object_read_function_name
+  role          = aws_iam_role.std17_object_read_role.arn
 
-  filename         = data.archive_file.std17_s3_bucket_function_zip.output_path
-  source_code_hash = data.archive_file.std17_s3_bucket_function_zip.output_base64sha256
+  filename         = data.archive_file.std17_object_read_zip.output_path
+  source_code_hash = data.archive_file.std17_object_read_zip.output_base64sha256
 
-  handler = "std17_s3_bucket_function.lambda_handler"
-  runtime = "python3.14"
-  timeout = 60
-
-  environment {
-    variables = {
-      BUCKET_NAME = var.s3_bucket_name
-    }
-  }
+  handler     = "std17_object_read.lambda_handler"   # 파일명.함수명
+  runtime     = "python3.14"
+  timeout     = 30
+  memory_size = 256
 
   depends_on = [
-    aws_iam_role_policy_attachment.std17_s3_bucket_function_basic,
-    aws_iam_role_policy.std17_s3_bucket_function_s3_access,
-    aws_cloudwatch_log_group.std17_s3_bucket_function,
+    aws_iam_role_policy_attachment.std17_object_read_basic,
+    aws_iam_role_policy.std17_object_read_s3_access,
+    aws_cloudwatch_log_group.std17_object_read,
   ]
 
-  tags = { Name = local.s3_function_name }
+  tags = { Name = local.object_read_function_name }
+}
+
+# ==================================================================
+# [오브젝트 읽기 함수] Function URL
+# ==================================================================
+resource "aws_lambda_function_url" "std17_object_read_url" {
+  function_name      = aws_lambda_function.std17_object_read.function_name
+  authorization_type = "NONE"
+
+  # 브라우저에서 호출하므로 CORS 필요
+  # → Python 코드에서는 CORS 헤더를 넣지 않음 (중복되면 브라우저 오류)
+  cors {
+    allow_origins = ["*"]
+    allow_methods = ["GET"]
+    allow_headers = ["content-type"]
+    max_age       = 3600
+  }
+}
+
+resource "aws_lambda_permission" "std17_object_read_url_public" {
+  statement_id           = "AllowPublicFunctionUrl"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.std17_object_read.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
 }

@@ -24,10 +24,10 @@ output "nat_public_ip" {
 }
 
 # ======================================================
-output "api_endpoint" {
-    value = module.apigateway.api_endpoint
+output "s3_file_function_url" {
+  value = module.lambda.s3_file_function_url
 }
 
-output "website_endpoint" {
-    value = module.storage.website_endpoint
+output "website_url" {
+  value = module.storage.website_url
 }

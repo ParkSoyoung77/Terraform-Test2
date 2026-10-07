@@ -11,6 +11,8 @@ locals {
 module "iam" {
     source = "./modules/iam"
 
+    s3_bucket_name = var.bucket_name
+
 }
 
 # ====================================================
@@ -67,8 +69,8 @@ module "database" {
 # ====================================================
 module "storage" {
     source = "./modules/storage"
-
-    api_endpoint = module.apigateway.api_endpoint
+    bucket_name  = var.bucket_name
+    api_endpoint = module.lambda.s3_file_function_url   # 파일 관리 페이지가 쓸 URL
 }
 
 # ====================================================
@@ -77,17 +79,7 @@ module "storage" {
 module "lambda" {
     source = "./modules/lambda"
 
-    # # DB 확인 함수
-    # private_subnet_ids = module.network.private_subnet_ids
-    # security_group_id  = module.security.lambda_sg_id
-    # db_secret_arn      = module.database.db_secret_arn
-    # db_host            = module.database.proxy_endpoint
-    # db_name            = module.database.db_name
-
-    # S3 버킷 함수
-    s3_bucket_name = module.storage.bucket_name
-
-    secret_name = module.database.secret_name
+    s3_bucket_name = var.bucket_name
 }
 
 

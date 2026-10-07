@@ -28,8 +28,8 @@ variable "nat_instance_type" {
     default     = "t3.micro"
 }
 
-variable "gitlab_instance_type" {
-    description = "GitLab 인스턴스 타입 (GitLab 최소 권장 메모리 4GB 이상)"
-    type        = string
-    default     = "t3.large"
+variable "bucket_name" {
+  description = "S3 웹사이트 버킷 이름"
+  type        = string
+  default     = "std17-eu-west-2-bucket"   
 }
