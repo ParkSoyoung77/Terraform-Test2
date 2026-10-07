@@ -32,6 +32,13 @@
         "Key": "<source_path>/<source_file>"  # 원본 파일의 경로 및 이름
     }
   )
+6. 객체 업로드
+  s3_client.put_object(
+    Bucket="<target_bucket>",           # 업로드할 버킷
+    Key="<dir_path>/<file_name>",       # 저장될 경로 및 이름
+    Body=<파일 바이트>,                  # base64 로 받은 내용을 디코딩한 값
+    ContentType="<MIME 타입>"           # 예: text/plain, image/png
+  )
 # ==========================================================================================
   호출 방법 (GET 쿼리스트링 또는 POST JSON 바디)
     ?action=list   &bucket_name=..&dir_name=..
@@ -40,14 +47,19 @@
     ?action=delete_many &bucket_name=..&dir_name=..&file_names=a.txt,b.txt
     ?action=copy   &bucket_name=..&dir_name=..&file_name=..
                    &target_bucket=..&target_dir=..&target_file=..   (비우면 원본과 같은 값)
+    POST (body: JSON 문자열)
+      {"action": "upload", "bucket_name": "..", "dir_name": "..", "file_name": "..",
+       "content": "<base64>", "content_type": "text/plain", "overwrite": false}
+      ※ 함수 URL 요청 한도(6MB) 때문에 파일 1개당 약 4MB 까지
 # ==========================================================================================
 """
-import json, boto3
+import json, boto3, base64, binascii, mimetypes
 from botocore.exceptions import ClientError
 
 s3_client = boto3.client("s3", region_name="eu-west-2")
 
 ROOT_NAMES = ["Root", "ROOT", "root", "/", ""]
+MAX_UPLOAD_BYTES = 4 * 1024 * 1024   # 업로드 파일 1개 최대 크기 (base64 로 커지면 함수 URL 한도 6MB 근접)
 
 
 # 디렉토리명 + 파일명 → 객체 키
@@ -82,8 +94,16 @@ def lambda_handler(event, context):
     # 요청 값 읽기 (GET 쿼리스트링 + POST JSON 바디)
     params = dict(event.get("queryStringParameters") or {})
     if event.get("body"):
+        raw_body = event["body"]
+        if event.get("isBase64Encoded"):              # 함수 URL 이 바디를 base64 로 감싼 경우
+            try:
+                raw_body = base64.b64decode(raw_body).decode("utf-8")
+            except (binascii.Error, UnicodeDecodeError):
+                raw_body = ""
         try:
-            params.update(json.loads(event["body"]))
+            body = json.loads(raw_body)
+            if isinstance(body, dict):
+                params.update(body)
         except (ValueError, TypeError):
             pass
 
@@ -214,6 +234,46 @@ def lambda_handler(event, context):
                 "message": "복사 완료",
                 "source": f"s3://{bucket_name}/{object_key}",
                 "target": f"s3://{target_bucket}/{target_key}"
+            })
+
+        # ------------------------------------------------------------------
+        # 6. 객체 업로드 (파일 1개씩 호출 → 여러 파일은 화면에서 반복 호출)
+        # ------------------------------------------------------------------
+        if action == "upload":
+            if "/" in file_name or file_name in (".", ".."):
+                return result(400, {"error": "파일명에 / 를 넣을 수 없습니다. 디렉토리는 dir_name 으로 지정하세요."})
+
+            try:
+                file_bytes = base64.b64decode(params.get("content") or "", validate=True)
+            except (binascii.Error, ValueError):
+                return result(400, {"error": "content 는 base64 문자열이어야 합니다."})
+            if len(file_bytes) > MAX_UPLOAD_BYTES:
+                return result(413, {"error": f"파일이 너무 큽니다 ({len(file_bytes)} bytes, 최대 {MAX_UPLOAD_BYTES})"})
+
+            overwrite = str(params.get("overwrite", "false")).lower() in ("true", "1", "yes")
+            if not overwrite:
+                try:
+                    s3_client.head_object(Bucket=bucket_name, Key=object_key)
+                    return result(409, {"error": f"이미 같은 이름의 파일이 있습니다: s3://{bucket_name}/{object_key}"})
+                except ClientError as e:
+                    if e.response["Error"]["Code"] not in ("404", "NoSuchKey"):
+                        raise
+
+            content_type = (params.get("content_type") or "").strip() \
+                or mimetypes.guess_type(file_name)[0] or "application/octet-stream"
+
+            s3_client.put_object(
+                Bucket=bucket_name,
+                Key=object_key,
+                Body=file_bytes,
+                ContentType=content_type
+            )
+            return result(200, {
+                "message": "업로드 완료",
+                "bucket": bucket_name,
+                "key": object_key,
+                "size": len(file_bytes),
+                "content_type": content_type
             })
 
         return result(400, {"error": f"지원하지 않는 action: {action}"})
