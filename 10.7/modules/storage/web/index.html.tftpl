@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>std17 S3 버킷 삭제</title>
+  <style>
+    body { font-family: sans-serif; max-width: 480px; margin: 48px auto; padding: 0 16px; }
+    input { width: 100%; padding: 10px; box-sizing: border-box; margin-bottom: 12px; }
+    button { width: 100%; padding: 10px; background: #d33; color: #fff; border: 0; cursor: pointer; }
+    button:disabled { background: #999; }
+    pre { background: #f4f4f4; padding: 12px; white-space: pre-wrap; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h2>S3 버킷 삭제</h2>
+  <p>std17- 로 시작하는 버킷만 삭제할 수 있습니다.</p>
+
+  <input id="bucket" placeholder="예: std17-eu-west-2-bucket-1234">
+  <button id="deleteBtn">삭제</button>
+
+  <h3>결과</h3>
+  <pre id="result">-</pre>
+
+  <script>
+    var API = "${api_endpoint}";
+    var btn = document.getElementById("deleteBtn");
+    var result = document.getElementById("result");
+
+    btn.addEventListener("click", function () {
+      var name = document.getElementById("bucket").value.trim();
+      if (!name) { result.textContent = "버킷 이름을 입력하세요."; return; }
+      if (!confirm("'" + name + "' 버킷과 안의 객체를 모두 삭제합니다. 계속할까요?")) return;
+
+      btn.disabled = true;
+      result.textContent = "삭제 중...";
+
+      fetch(API + "/bucket/delete?bucket_name=" + encodeURIComponent(name))
+        .then(function (res) {
+          return res.json().then(function (data) {
+            result.textContent = "HTTP " + res.status + "\n" + JSON.stringify(data, null, 2);
+          });
+        })
+        .catch(function (err) { result.textContent = "요청 실패: " + err; })
+        .finally(function () { btn.disabled = false; });
+    });
+  </script>
+</body>
+</html>
