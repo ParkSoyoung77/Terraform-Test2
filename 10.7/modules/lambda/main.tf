@@ -129,7 +129,7 @@ resource "aws_lambda_function_url" "std17_object_read_url" {
   # → Python 코드에서는 CORS 헤더를 넣지 않음 (중복되면 브라우저 오류)
   cors {
     allow_origins = ["*"]
-    allow_methods = ["GET"] # 읽기/삭제/복사 모두 GET 쿼리스트링으로 호출
+    allow_methods = ["*"] # 읽기/삭제/복사 모두 GET 쿼리스트링으로 호출
     allow_headers = ["content-type"]
     max_age       = 3600
   }

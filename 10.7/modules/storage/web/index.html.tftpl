@@ -199,7 +199,7 @@
       $("listBtn").disabled = true;
 
       try {
-        const data = await callApi({ action: "list", bucket, prefix });
+        const data = await callApi({ action: "list", bucket_name: bucket, dir_name: prefix || "/" });
         const folders = data.folders || [];
         const files = data.files || [];
 
