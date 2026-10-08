@@ -70,7 +70,6 @@ module "database" {
 module "storage" {
     source = "./modules/storage"
     bucket_name  = var.bucket_name
-    api_endpoint = module.apigateway.api_endpoint
 }
 
 # ====================================================

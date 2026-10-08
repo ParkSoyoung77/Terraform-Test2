@@ -1,1442 +1,204 @@
-<!DOCTYPE html>
-<html lang="ko" class="h-full bg-slate-50 dark:bg-slate-900">
+<!doctype html>
+<html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AWS S3 파일 관리 대시보드</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        aws: {
-                            orange: '#FF9900',
-                            navy: '#232F3E',
-                            squid: '#1A2432',
-                            blue: '#0073BB',
-                            darkBlue: '#0f172a'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", Roboto, "Helvetica Neue", Arial, sans-serif; }
-        .mono { font-family: Consolas, "D2Coding", ui-monospace, monospace; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>std17 썸네일 생성기</title>
+  <style>
+    :root {
+      --bg: #f5f6f8; --card: #ffffff; --text: #1f2328; --muted: #6b7280;
+      --line: #e5e7eb; --accent: #2563eb; --ok: #16a34a; --err: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, "Malgun Gothic", sans-serif;
+           background: var(--bg); color: var(--text); }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .sub { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+            padding: 20px; margin-bottom: 20px; }
+    .drop { border: 2px dashed var(--line); border-radius: 10px; padding: 32px 16px;
+            text-align: center; color: var(--muted); cursor: pointer; transition: .15s; }
+    .drop.over { border-color: var(--accent); background: #eff6ff; color: var(--accent); }
+    .drop strong { color: var(--text); }
+    #fileInput { display: none; }
+    .status { list-style: none; padding: 0; margin: 16px 0 0; font-size: 14px; }
+    .status li { display: flex; justify-content: space-between; gap: 12px;
+                 padding: 8px 0; border-top: 1px solid var(--line); }
+    .status .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ok { color: var(--ok); } .err { color: var(--err); } .wait { color: var(--muted); }
+    .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .head h2 { font-size: 17px; margin: 0; }
+    button { border: 1px solid var(--line); background: #fff; border-radius: 8px;
+             padding: 6px 12px; cursor: pointer; font-size: 14px; }
+    button:hover { border-color: var(--accent); color: var(--accent); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .item { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fafafa; }
+    .item a { display: block; }
+    .item img { width: 100%; height: 150px; object-fit: contain; background: #fff; display: block; }
+    .item .cap { padding: 8px; font-size: 12px; color: var(--muted);
+                 overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 24px 0; }
+  </style>
 </head>
-<body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200">
+<body>
+  <div class="wrap">
+    <h1>std17 썸네일 생성기</h1>
+    <p class="sub">uploads/ 에 이미지를 올리면 Lambda가 200×200 썸네일을 thumbnails/ 에 만듭니다.</p>
 
-    <div id="app" class="min-h-screen flex flex-col">
-        <!-- Header Bar -->
-        <header class="bg-aws-navy text-white sticky top-0 z-40 shadow-md">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="bg-aws-orange p-2 rounded-lg text-aws-navy font-bold flex items-center justify-center w-10 h-10 shadow">
-                        <i class="fa-solid fa-folder-tree text-xl"></i>
-                    </div>
-                    <div>
-                        <h1 class="font-bold text-lg leading-tight flex items-center space-x-2">
-                            <span>AWS S3 파일 익스플로러</span>
-                            <span class="text-xs font-normal bg-aws-orange/20 text-aws-orange border border-aws-orange/30 px-2 py-0.5 rounded-full">Lambda Live</span>
-                        </h1>
-                        <p class="text-xs text-slate-400 hidden sm:block">boto3 & Lambda Function URL 연동 · 목록 / 읽기 / 업로드 / 복사 / 삭제</p>
-                    </div>
-                </div>
-
-                <div class="flex items-center space-x-3">
-                    <button id="themeToggle" title="다크/라이트 모드 전환" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
-                        <span class="dark:hidden"><i class="fa-solid fa-moon"></i></span>
-                        <span class="hidden dark:inline"><i class="fa-solid fa-sun text-amber-400"></i></span>
-                    </button>
-                    <button id="refreshBtn" class="bg-aws-orange hover:bg-amber-500 text-aws-navy font-semibold px-3 py-2 rounded-lg text-xs shadow transition-all flex items-center space-x-1">
-                        <i id="refreshIcon" class="fa-solid fa-arrows-rotate"></i>
-                        <span class="hidden sm:inline">새로고침</span>
-                    </button>
-                </div>
-            </div>
-        </header>
-
-        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-
-            <!-- Endpoint / Target Configuration Box -->
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-5 transition-all space-y-4">
-                <div>
-                    <label for="apiUrl" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                        <i class="fa-solid fa-link text-aws-orange mr-1"></i> 파일 관리 Lambda URL
-                    </label>
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="url" id="apiUrl" placeholder="https://xxxxxxxx.lambda-url.eu-west-2.on.aws/"
-                            class="block w-full py-2.5 px-3 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-aws-orange focus:border-aws-orange dark:text-white font-mono transition-all">
-                        <button id="fetchBtn" class="bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-semibold px-5 py-2.5 rounded-lg shadow transition-all flex items-center justify-center space-x-2 text-sm whitespace-nowrap">
-                            <i class="fa-solid fa-paper-plane text-aws-orange"></i>
-                            <span>목록 조회</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label for="bucketInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                            <i class="fa-solid fa-bucket text-aws-orange mr-1"></i> 버킷 이름
-                        </label>
-                        <input type="text" id="bucketInput" placeholder="예: std17-eu-west-2-bucket-test"
-                            class="block w-full py-2.5 px-3 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-aws-orange focus:border-aws-orange dark:text-white font-mono transition-all">
-                    </div>
-                    <div>
-                        <label for="dirInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                            <i class="fa-solid fa-folder-open text-aws-orange mr-1"></i> 디렉토리 (기본: / = root)
-                        </label>
-                        <input type="text" id="dirInput" value="/"
-                            class="block w-full py-2.5 px-3 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-aws-orange focus:border-aws-orange dark:text-white font-mono transition-all">
-                    </div>
-                    <div>
-                        <label for="fileInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                            <i class="fa-solid fa-file-lines text-aws-orange mr-1"></i> 파일명
-                        </label>
-                        <div class="flex gap-2">
-                            <input type="text" id="fileInput" placeholder="예: main.py"
-                                class="block w-full py-2.5 px-3 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-aws-orange focus:border-aws-orange dark:text-white font-mono transition-all">
-                            <button id="readBtn" class="bg-aws-orange hover:bg-amber-500 text-aws-navy font-semibold px-4 py-2.5 rounded-lg shadow transition-all flex items-center justify-center space-x-1.5 text-sm whitespace-nowrap">
-                                <i class="fa-solid fa-book-open"></i>
-                                <span>읽기</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Stats -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center space-x-4">
-                    <div class="p-3 bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 rounded-xl">
-                        <i class="fa-solid fa-folder text-2xl"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400">폴더 수</p>
-                        <h3 id="statFolders" class="text-2xl font-bold text-slate-900 dark:text-white">0</h3>
-                    </div>
-                </div>
-
-                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center space-x-4">
-                    <div class="p-3 bg-blue-100 dark:bg-blue-900/40 text-aws-blue dark:text-blue-400 rounded-xl">
-                        <i class="fa-solid fa-file-lines text-2xl"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400">파일 수</p>
-                        <h3 id="statFiles" class="text-2xl font-bold text-slate-900 dark:text-white">0</h3>
-                    </div>
-                </div>
-
-                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center space-x-4">
-                    <div class="p-3 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-xl">
-                        <i class="fa-solid fa-database text-2xl"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400">현재 폴더 용량</p>
-                        <h3 id="statSize" class="text-2xl font-bold text-slate-900 dark:text-white">0 B</h3>
-                    </div>
-                </div>
-
-                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center space-x-4">
-                    <div class="p-3 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 rounded-xl">
-                        <i class="fa-solid fa-clock-rotate-left text-2xl"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400">최근 동기화 시간</p>
-                        <h3 id="statLastSync" class="text-xs font-semibold text-slate-900 dark:text-white mt-1">대기 중...</h3>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Breadcrumb + Toolbar -->
-            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <nav id="breadcrumb" class="flex flex-wrap items-center gap-1 text-sm font-mono break-all">
-                        <span class="text-slate-400">버킷을 조회하세요</span>
-                    </nav>
-                    <button id="upBtn" class="hidden px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center space-x-1.5">
-                        <i class="fa-solid fa-arrow-turn-up"></i>
-                        <span>상위 폴더</span>
-                    </button>
-                </div>
-
-                <div class="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <!-- Search Input -->
-                    <div class="relative w-full md:w-72">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                        <input type="text" id="searchInput" placeholder="파일 / 폴더 이름 검색..."
-                            class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-aws-orange focus:border-aws-orange dark:text-white">
-                    </div>
-
-                    <!-- Filters and Control Elements -->
-                    <div class="flex flex-wrap items-center justify-between w-full md:w-auto gap-3">
-                        <!-- Upload -->
-                        <button id="uploadBtn" class="px-3 py-2 rounded-lg text-xs font-semibold bg-aws-orange hover:bg-amber-500 text-aws-navy shadow transition-all flex items-center space-x-1.5">
-                            <i class="fa-solid fa-cloud-arrow-up"></i>
-                            <span>업로드</span>
-                        </button>
-
-                        <!-- Bulk Delete -->
-                        <button id="bulkDeleteBtn" disabled class="px-3 py-2 rounded-lg text-xs font-semibold text-rose-600 border border-rose-200 dark:border-rose-900/60 dark:text-rose-400 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 dark:hover:text-white transition-all disabled:opacity-40 disabled:pointer-events-none flex items-center space-x-1.5">
-                            <i class="fa-regular fa-trash-can"></i>
-                            <span>선택 삭제 (<span id="selectedCount">0</span>)</span>
-                        </button>
-
-                        <!-- Sort Options -->
-                        <select id="sortOption" class="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm rounded-lg focus:ring-2 focus:ring-aws-orange focus:border-aws-orange px-3 py-2">
-                            <option value="name-asc">이름 오름차순 (A-Z)</option>
-                            <option value="name-desc">이름 내림차순 (Z-A)</option>
-                            <option value="date-desc">수정일 최신순</option>
-                            <option value="date-asc">수정일 오래된순</option>
-                            <option value="size-desc">크기 큰 순</option>
-                        </select>
-
-                        <!-- View Toggle Buttons -->
-                        <div class="flex items-center bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                            <button id="tableViewBtn" class="p-1.5 px-3 rounded-md text-xs font-medium bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm transition-all flex items-center space-x-1">
-                                <i class="fa-solid fa-table-list"></i>
-                                <span class="hidden sm:inline">테이블</span>
-                            </button>
-                            <button id="gridViewBtn" class="p-1.5 px-3 rounded-md text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-all flex items-center space-x-1">
-                                <i class="fa-solid fa-border-all"></i>
-                                <span class="hidden sm:inline">카드 그리드</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Error Notification Alert Box -->
-            <div id="errorBox" class="hidden bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-xl p-5 text-rose-700 dark:text-rose-300 shadow-sm">
-                <div class="flex items-start space-x-3">
-                    <i class="fa-solid fa-triangle-exclamation text-xl mt-0.5 text-rose-500"></i>
-                    <div class="flex-1">
-                        <h4 id="errorTitle" class="font-bold text-sm">요청을 처리할 수 없습니다</h4>
-                        <p id="errorMessage" class="text-xs mt-1 text-rose-600 dark:text-rose-300 break-all">서버와의 통신 도중 에러가 발생했습니다.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div id="contentContainer" class="relative">
-
-                <!-- Loading Skeleton -->
-                <div id="loadingSkeleton" class="hidden space-y-4">
-                    <div class="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 animate-pulse">
-                        <div class="h-6 bg-slate-200 dark:bg-slate-700 rounded w-1/4 mb-4"></div>
-                        <div class="space-y-3">
-                            <div class="h-12 bg-slate-100 dark:bg-slate-700/50 rounded-lg"></div>
-                            <div class="h-12 bg-slate-100 dark:bg-slate-700/50 rounded-lg"></div>
-                            <div class="h-12 bg-slate-100 dark:bg-slate-700/50 rounded-lg"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Empty State -->
-                <div id="emptyState" class="hidden bg-white dark:bg-slate-800 rounded-xl p-12 text-center border border-slate-200 dark:border-slate-700 shadow-sm">
-                    <div class="w-16 h-16 bg-slate-100 dark:bg-slate-700 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fa-solid fa-box-open text-2xl"></i>
-                    </div>
-                    <h3 class="text-base font-bold text-slate-800 dark:text-white">표시할 파일이 없습니다</h3>
-                    <p id="emptyMessage" class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-                        버킷 이름을 입력하고 [목록 조회]를 누르세요.
-                    </p>
-                </div>
-
-                <!-- Table View -->
-                <div id="tableView" class="hidden bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full min-w-[720px] text-left text-sm text-slate-600 dark:text-slate-300">
-                            <thead class="bg-slate-50 dark:bg-slate-900/60 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
-                                <tr>
-                                    <th scope="col" class="pl-6 pr-2 py-3.5 w-10">
-                                        <input type="checkbox" id="selectAll" title="파일 전체 선택" class="rounded border-slate-300 text-aws-orange focus:ring-aws-orange">
-                                    </th>
-                                    <th scope="col" class="px-4 py-3.5">이름</th>
-                                    <th scope="col" class="px-4 py-3.5">크기</th>
-                                    <th scope="col" class="px-4 py-3.5">수정 날짜</th>
-                                    <th scope="col" class="px-6 py-3.5 text-right">작업</th>
-                                </tr>
-                            </thead>
-                            <tbody id="fileTableBody" class="divide-y divide-slate-200 dark:divide-slate-700">
-                                <!-- Dynamic Rows injected via Javascript -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Grid View -->
-                <div id="gridView" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Dynamic Cards injected via Javascript -->
-                </div>
-            </div>
-
-        </main>
-
-        <!-- Footer -->
-        <footer class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-4 mt-auto">
-            <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 dark:text-slate-400">
-                AWS S3 File Explorer &bull; Powered by AWS Lambda & boto3
-            </div>
-        </footer>
+    <div class="card">
+      <label class="drop" id="drop">
+        <strong>이미지를 끌어다 놓거나 클릭해서 선택</strong><br>
+        jpg · jpeg · png · webp · gif
+        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp,.gif" multiple>
+      </label>
+      <ul class="status" id="status"></ul>
     </div>
 
-    <!-- Modal: File Viewer (읽기) -->
-    <div id="viewerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-all">
-        <div class="modal-box bg-white dark:bg-slate-800 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-700 transform transition-all scale-95 opacity-0">
-            <div class="flex items-start justify-between gap-3 p-5 border-b border-slate-200 dark:border-slate-700">
-                <div class="flex items-center space-x-3 min-w-0">
-                    <div class="p-3 bg-blue-100 dark:bg-blue-950/80 text-aws-blue dark:text-blue-400 rounded-full">
-                        <i class="fa-solid fa-file-code text-xl"></i>
-                    </div>
-                    <div class="min-w-0">
-                        <h3 class="text-lg font-bold text-slate-900 dark:text-white">파일 내용</h3>
-                        <p id="viewerPath" class="font-mono text-xs text-slate-500 dark:text-slate-400 break-all">-</p>
-                    </div>
-                </div>
-                <button data-close="viewerModal" title="닫기" class="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 dark:hover:text-white transition-colors">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <div class="p-5 space-y-3 overflow-hidden flex flex-col flex-1 min-h-0">
-                <div id="viewerMeta" class="flex flex-wrap gap-2"></div>
-                <pre id="viewerContent" class="mono flex-1 min-h-[200px] overflow-auto bg-slate-900 text-slate-100 text-xs sm:text-sm leading-relaxed p-4 rounded-lg whitespace-pre-wrap break-all">불러오는 중...</pre>
-            </div>
-
-            <div class="flex flex-wrap items-center justify-end gap-2 p-5 border-t border-slate-200 dark:border-slate-700">
-                <button id="viewerClipBtn" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center space-x-1.5">
-                    <i class="fa-regular fa-clipboard"></i>
-                    <span>클립보드 복사</span>
-                </button>
-                <button id="viewerCopyBtn" class="px-4 py-2 bg-aws-blue hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow transition-all flex items-center space-x-1.5">
-                    <i class="fa-regular fa-copy"></i>
-                    <span>다른 위치로 복사</span>
-                </button>
-                <button id="viewerDeleteBtn" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold shadow transition-all flex items-center space-x-1.5">
-                    <i class="fa-regular fa-trash-can"></i>
-                    <span>삭제</span>
-                </button>
-            </div>
-        </div>
+    <div class="card">
+      <div class="head">
+        <h2>썸네일 목록</h2>
+        <button id="refresh">새로고침</button>
+      </div>
+      <div class="grid" id="grid"></div>
     </div>
+  </div>
 
-    <!-- Modal: Copy (복사) -->
-    <div id="copyModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-all">
-        <div class="modal-box bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 transform transition-all scale-95 opacity-0">
-            <div class="flex items-center space-x-3 text-aws-blue dark:text-blue-400 mb-4">
-                <div class="p-3 bg-blue-100 dark:bg-blue-950/80 rounded-full">
-                    <i class="fa-regular fa-copy text-xl"></i>
-                </div>
-                <h3 class="text-lg font-bold text-slate-900 dark:text-white">S3 객체 복사</h3>
-            </div>
+  <script>
+    // S3 REST 엔드포인트 (Terraform templatefile 로 주입)
+    const S3 = "https://${s3_endpoint}";
+    const ALLOWED = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
 
-            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">원본</p>
-            <div class="p-3 bg-slate-100 dark:bg-slate-900 rounded-lg font-mono text-xs text-slate-800 dark:text-slate-200 font-bold break-all mb-4 border border-slate-200 dark:border-slate-700 flex items-center space-x-2">
-                <i class="fa-solid fa-file-lines text-aws-orange"></i>
-                <span id="copySourcePath">-</span>
-            </div>
+    const grid = document.getElementById("grid");
+    const statusList = document.getElementById("status");
+    const drop = document.getElementById("drop");
+    const fileInput = document.getElementById("fileInput");
 
-            <div class="space-y-3 mb-4">
-                <div>
-                    <label for="copyBucket" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">대상 버킷</label>
-                    <input type="text" id="copyBucket" class="block w-full py-2 px-3 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-aws-blue focus:border-aws-blue dark:text-white font-mono">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label for="copyDir" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">대상 디렉토리</label>
-                        <input type="text" id="copyDir" class="block w-full py-2 px-3 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-aws-blue focus:border-aws-blue dark:text-white font-mono">
-                    </div>
-                    <div>
-                        <label for="copyFile" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">대상 파일명</label>
-                        <input type="text" id="copyFile" class="block w-full py-2 px-3 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-aws-blue focus:border-aws-blue dark:text-white font-mono">
-                    </div>
-                </div>
-            </div>
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const encodeKey = (key) => key.split("/").map(encodeURIComponent).join("/");
+    const extOf = (name) => {
+      const i = name.lastIndexOf(".");
+      return i < 0 ? "" : name.slice(i).toLowerCase();
+    };
 
-            <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">
-                * 대상 경로에 같은 이름의 파일이 있으면 덮어씁니다.
-            </p>
+    // ---------------- 목록 ----------------
+    async function listKeys(prefix) {
+      const res = await fetch(S3 + "/?list-type=2&prefix=" + encodeURIComponent(prefix), { cache: "no-store" });
+      if (!res.ok) throw new Error("목록 조회 실패 (" + res.status + ")");
+      const xml = new DOMParser().parseFromString(await res.text(), "application/xml");
+      return Array.from(xml.getElementsByTagName("Contents"))
+        .map((c) => ({
+          key: c.getElementsByTagName("Key")[0].textContent,
+          modified: c.getElementsByTagName("LastModified")[0].textContent,
+        }))
+        .filter((o) => !o.key.endsWith("/"));
+    }
 
-            <div class="flex items-center justify-end space-x-3">
-                <button data-close="copyModal" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                    취소
-                </button>
-                <button id="confirmCopyBtn" class="px-4 py-2 bg-aws-blue hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow transition-all flex items-center space-x-1.5">
-                    <span id="copySpinner" class="hidden"><i class="fa-solid fa-spinner fa-spin"></i></span>
-                    <span>복사</span>
-                </button>
-            </div>
-        </div>
-    </div>
+    async function loadGallery() {
+      grid.replaceChildren();
+      try {
+        const items = await listKeys("thumbnails/");
+        items.sort((a, b) => b.modified.localeCompare(a.modified));
+        if (items.length === 0) {
+          const p = document.createElement("div");
+          p.className = "empty";
+          p.textContent = "아직 썸네일이 없습니다.";
+          grid.appendChild(p);
+          return;
+        }
+        for (const it of items) {
+          const name = it.key.slice("thumbnails/".length);
+          const card = document.createElement("div");
+          card.className = "item";
 
-    <!-- Modal: Delete Confirmation (삭제 / 다중 삭제) -->
-    <div id="deleteModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-all">
-        <div class="modal-box bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 transform transition-all scale-95 opacity-0">
-            <div class="flex items-center space-x-3 text-rose-600 dark:text-rose-500 mb-4">
-                <div class="p-3 bg-rose-100 dark:bg-rose-950/80 rounded-full">
-                    <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-                </div>
-                <h3 id="deleteTitle" class="text-lg font-bold text-slate-900 dark:text-white">S3 객체 삭제 확인</h3>
-            </div>
+          const a = document.createElement("a");
+          a.href = S3 + "/uploads/" + encodeKey(name);   // 클릭 시 원본
+          a.target = "_blank";
+          a.title = "원본 보기";
 
-            <p class="text-sm text-slate-600 dark:text-slate-300 mb-2">
-                정말로 아래 파일을 삭제하시겠습니까?
-            </p>
+          const img = document.createElement("img");
+          img.src = S3 + "/" + encodeKey(it.key) + "?t=" + Date.parse(it.modified);
+          img.alt = name;
+          img.loading = "lazy";
 
-            <ul id="deleteTargetList" class="p-3 bg-slate-100 dark:bg-slate-900 rounded-lg font-mono text-xs text-slate-800 dark:text-slate-200 font-bold break-all mb-4 border border-slate-200 dark:border-slate-700 space-y-1 max-h-48 overflow-auto">
-            </ul>
+          const cap = document.createElement("div");
+          cap.className = "cap";
+          cap.textContent = name;
 
-            <p class="text-xs text-rose-500 mb-6">
-                * 이 작업은 되돌릴 수 없습니다.
-            </p>
+          a.appendChild(img);
+          card.append(a, cap);
+          grid.appendChild(card);
+        }
+      } catch (e) {
+        const p = document.createElement("div");
+        p.className = "empty err";
+        p.textContent = e.message;
+        grid.appendChild(p);
+      }
+    }
 
-            <div class="flex items-center justify-end space-x-3">
-                <button data-close="deleteModal" id="cancelDeleteBtn" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                    취소
-                </button>
-                <button id="confirmDeleteBtn" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold shadow transition-all flex items-center space-x-1.5">
-                    <span id="deleteSpinner" class="hidden"><i class="fa-solid fa-spinner fa-spin"></i></span>
-                    <span>삭제</span>
-                </button>
-            </div>
-        </div>
-    </div>
+    // ---------------- 업로드 ----------------
+    function addStatus(name) {
+      const li = document.createElement("li");
+      const n = document.createElement("span");
+      n.className = "name";
+      n.textContent = name;
+      const s = document.createElement("span");
+      li.append(n, s);
+      statusList.prepend(li);
+      return (text, cls) => { s.textContent = text; s.className = cls; };
+    }
 
-    <!-- Modal: Upload (업로드 / 다중 업로드) -->
-    <div id="uploadModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-all">
-        <div class="modal-box bg-white dark:bg-slate-800 rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col p-6 shadow-2xl border border-slate-200 dark:border-slate-700 transform transition-all scale-95 opacity-0">
-            <div class="flex items-center space-x-3 text-amber-600 dark:text-amber-400 mb-4">
-                <div class="p-3 bg-amber-100 dark:bg-amber-950/80 rounded-full">
-                    <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
-                </div>
-                <h3 class="text-lg font-bold text-slate-900 dark:text-white">S3 파일 업로드</h3>
-            </div>
+    async function waitThumbnail(name) {
+      const url = S3 + "/thumbnails/" + encodeKey(name);
+      for (let i = 0; i < 20; i++) {          // 최대 약 30초 대기
+        await sleep(1500);
+        const res = await fetch(url, { method: "HEAD", cache: "no-store" });
+        if (res.ok) return true;
+      }
+      return false;
+    }
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                <div>
-                    <label for="uploadBucket" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">대상 버킷</label>
-                    <input type="text" id="uploadBucket" class="block w-full py-2 px-3 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-aws-orange focus:border-aws-orange dark:text-white font-mono">
-                </div>
-                <div>
-                    <label for="uploadDir" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">대상 디렉토리</label>
-                    <input type="text" id="uploadDir" class="block w-full py-2 px-3 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-aws-orange focus:border-aws-orange dark:text-white font-mono">
-                </div>
-            </div>
-
-            <!-- Drop Zone -->
-            <label id="dropZone" for="uploadInput" class="flex flex-col items-center justify-center text-center cursor-pointer border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl px-4 py-6 mb-4 bg-slate-50 dark:bg-slate-900/60 hover:border-aws-orange hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-colors">
-                <i class="fa-solid fa-file-arrow-up text-3xl text-aws-orange mb-2"></i>
-                <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">여기로 파일을 끌어다 놓거나 클릭해서 선택</span>
-                <span class="text-xs text-slate-500 dark:text-slate-400 mt-1">여러 개 선택 가능 · 파일당 최대 4 MB</span>
-                <input type="file" id="uploadInput" multiple class="hidden">
-            </label>
-
-            <!-- Selected Files -->
-            <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
-                <span id="uploadSummary">선택된 파일 없음</span>
-                <button id="uploadClearBtn" class="hover:text-rose-600 dark:hover:text-rose-400 font-semibold">목록 비우기</button>
-            </div>
-            <ul id="uploadList" class="flex-1 min-h-0 overflow-auto space-y-2 mb-3"></ul>
-
-            <div class="h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mb-4">
-                <div id="uploadProgress" class="h-full bg-aws-orange transition-all" style="width: 0%"></div>
-            </div>
-
-            <label class="flex items-center space-x-2 text-xs text-slate-600 dark:text-slate-300 mb-6">
-                <input type="checkbox" id="uploadOverwrite" class="rounded border-slate-300 text-aws-orange focus:ring-aws-orange">
-                <span>같은 이름의 파일이 있으면 덮어쓰기</span>
-            </label>
-
-            <div class="flex items-center justify-end space-x-3">
-                <button data-close="uploadModal" id="cancelUploadBtn" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                    닫기
-                </button>
-                <button id="confirmUploadBtn" class="px-4 py-2 bg-aws-orange hover:bg-amber-500 text-aws-navy rounded-lg text-xs font-semibold shadow transition-all flex items-center space-x-1.5 disabled:opacity-50">
-                    <span id="uploadSpinner" class="hidden"><i class="fa-solid fa-spinner fa-spin"></i></span>
-                    <span id="confirmUploadLabel">업로드</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // ==========================================================
-        // 설정
-        //   ※ 이 파일은 Terraform templatefile 로 렌더링되므로
-        //     아래 api_endpoint 자리 외에는 달러+중괄호 문법을 쓰지 않음
-        // ==========================================================
-        const DEFAULT_API = "${api_endpoint}"; // Terraform templatefile로 주입
-        const STORE_PREFIX = "s3fm.";
-        const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;   // 파일 1개 최대 4MB (Lambda 함수 URL 요청 한도 6MB)
-
-        let state = {
-            bucket: '',
-            prefix: '',               // "ex01/" 또는 "" (root)
-            items: [],                // { type: 'folder' | 'file', key, name, size, modified }
-            filteredItems: [],
-            selected: new Set(),      // 선택된 파일 key
-            viewMode: 'table',
-            isLoading: false,
-            lastSyncTime: null,
-            searchQuery: '',
-            sortBy: 'name-asc',
-            viewerTarget: null,       // { bucket, key }
-            copySource: null,         // { bucket, key }
-            deleteTargets: [],        // [{ bucket, key }]
-            uploadItems: [],          // [{ file, status: 'pending'|'uploading'|'done'|'error'|'invalid', message }]
-            isUploading: false
-        };
-
-        const $ = (id) => document.getElementById(id);
-
-        const apiUrlInput = $('apiUrl');
-        const bucketInput = $('bucketInput');
-        const dirInput = $('dirInput');
-        const fileInput = $('fileInput');
-        const fetchBtn = $('fetchBtn');
-        const readBtn = $('readBtn');
-        const refreshBtn = $('refreshBtn');
-        const refreshIcon = $('refreshIcon');
-        const themeToggle = $('themeToggle');
-        const searchInput = $('searchInput');
-        const sortOption = $('sortOption');
-        const tableViewBtn = $('tableViewBtn');
-        const gridViewBtn = $('gridViewBtn');
-        const tableView = $('tableView');
-        const gridView = $('gridView');
-        const fileTableBody = $('fileTableBody');
-        const selectAll = $('selectAll');
-        const bulkDeleteBtn = $('bulkDeleteBtn');
-        const selectedCount = $('selectedCount');
-        const breadcrumb = $('breadcrumb');
-        const upBtn = $('upBtn');
-        const loadingSkeleton = $('loadingSkeleton');
-        const emptyState = $('emptyState');
-        const emptyMessage = $('emptyMessage');
-        const errorBox = $('errorBox');
-        const errorTitle = $('errorTitle');
-        const errorMessage = $('errorMessage');
-
-        document.addEventListener('DOMContentLoaded', () => {
-            setupTheme();
-            restoreInputs();
-            setupEventListeners();
-            renderBreadcrumb();
-            renderView();
-            if (apiUrlInput.value && bucketInput.value) handleFetch();
+    async function upload(file) {
+      const set = addStatus(file.name);
+      if (!ALLOWED.includes(extOf(file.name))) {
+        set("지원하지 않는 형식", "err");
+        return;
+      }
+      try {
+        set("업로드 중…", "wait");
+        const res = await fetch(S3 + "/uploads/" + encodeKey(file.name), {
+          method: "PUT",
+          headers: { "Content-Type": file.type || "application/octet-stream" },
+          body: file,
         });
+        if (!res.ok) throw new Error("업로드 실패 (" + res.status + ")");
 
-        // ==========================================================
-        // 초기화
-        // ==========================================================
-        function storeGet(k) { try { return localStorage.getItem(STORE_PREFIX + k) || ''; } catch (e) { return ''; } }
-        function storeSet(k, v) { try { localStorage.setItem(STORE_PREFIX + k, v); } catch (e) {} }
-
-        function restoreInputs() {
-            const params = new URLSearchParams(location.search);
-            // 템플릿이 렌더링되지 않은 상태(로컬에서 그냥 연 경우)면 기본 URL 무시
-            const defaultApi = DEFAULT_API.indexOf('api_endpoint') >= 0 ? '' : DEFAULT_API;
-            apiUrlInput.value = params.get('api') || defaultApi || storeGet('api');
-            bucketInput.value = params.get('bucket') || storeGet('bucket');
-            dirInput.value = '/' + normPrefix(params.get('prefix') || '');
+        set("썸네일 생성 대기…", "wait");
+        if (await waitThumbnail(file.name)) {
+          set("완료", "ok");
+          loadGallery();
+        } else {
+          set("시간 초과 (Lambda 로그 확인)", "err");
         }
-
-        function setupEventListeners() {
-            themeToggle.addEventListener('click', toggleTheme);
-            fetchBtn.addEventListener('click', handleFetch);
-            refreshBtn.addEventListener('click', handleFetch);
-            readBtn.addEventListener('click', readFromInputs);
-            upBtn.addEventListener('click', goUp);
-
-            [apiUrlInput, bucketInput, dirInput].forEach((el) =>
-                el.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleFetch(); }));
-            fileInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') readFromInputs(); });
-
-            searchInput.addEventListener('input', (e) => {
-                state.searchQuery = e.target.value.toLowerCase().trim();
-                applyFiltersAndSort();
-            });
-            sortOption.addEventListener('change', (e) => {
-                state.sortBy = e.target.value;
-                applyFiltersAndSort();
-            });
-
-            tableViewBtn.addEventListener('click', () => setViewMode('table'));
-            gridViewBtn.addEventListener('click', () => setViewMode('grid'));
-
-            // 목록의 버튼/체크박스는 이벤트 위임으로 처리
-            fileTableBody.addEventListener('click', handleItemAction);
-            gridView.addEventListener('click', handleItemAction);
-            fileTableBody.addEventListener('change', handleItemCheck);
-            gridView.addEventListener('change', handleItemCheck);
-            selectAll.addEventListener('change', toggleSelectAll);
-            bulkDeleteBtn.addEventListener('click', () => {
-                const targets = Array.from(state.selected).map((key) => ({ bucket: state.bucket, key: key }));
-                promptDelete(targets);
-            });
-
-            // 모달
-            document.querySelectorAll('[data-close]').forEach((btn) =>
-                btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close'))));
-            ['viewerModal', 'copyModal', 'deleteModal', 'uploadModal'].forEach((id) =>
-                $(id).addEventListener('click', (e) => { if (e.target.id === id) closeModal(id); }));
-            document.addEventListener('keydown', (e) => {
-                if (e.key !== 'Escape') return;
-                ['deleteModal', 'copyModal', 'uploadModal', 'viewerModal'].some((id) => {
-                    if (!$(id).classList.contains('hidden')) { closeModal(id); return true; }
-                    return false;
-                });
-            });
-
-            $('viewerClipBtn').addEventListener('click', copyViewerToClipboard);
-            $('viewerCopyBtn').addEventListener('click', () => { if (state.viewerTarget) promptCopy(state.viewerTarget); });
-            $('viewerDeleteBtn').addEventListener('click', () => { if (state.viewerTarget) promptDelete([state.viewerTarget]); });
-            $('confirmCopyBtn').addEventListener('click', executeCopy);
-            $('confirmDeleteBtn').addEventListener('click', executeDelete);
-
-            // 업로드
-            $('uploadBtn').addEventListener('click', () => promptUpload());
-            $('uploadInput').addEventListener('change', (e) => { addUploadFiles(e.target.files); e.target.value = ''; });
-            $('uploadClearBtn').addEventListener('click', () => { if (!state.isUploading) { state.uploadItems = []; renderUploadList(); } });
-            $('uploadList').addEventListener('click', (e) => {
-                const btn = e.target.closest('[data-remove]');
-                if (!btn || state.isUploading) return;
-                state.uploadItems.splice(Number(btn.getAttribute('data-remove')), 1);
-                renderUploadList();
-            });
-            $('confirmUploadBtn').addEventListener('click', executeUpload);
-            setupDropZone();
-        }
-
-        function setupTheme() {
-            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                document.documentElement.classList.add('dark');
-            }
-        }
-
-        function toggleTheme() {
-            document.documentElement.classList.toggle('dark');
-        }
-
-        // ==========================================================
-        // 공통 유틸
-        // ==========================================================
-        // "/a/b" , "a/b/" , "/" , "root" → "a/b/" , "" (root)
-        function normPrefix(p) {
-            p = (p || '').trim().replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/{2,}/g, '/');
-            if (p && !p.endsWith('/')) p += '/';
-            if (p.toLowerCase() === 'root/') p = '';     // Lambda 의 ROOT_NAMES 와 동일하게 처리
-            return p;
-        }
-
-        // "ex01/main.py" → { dir: "ex01/", file: "main.py" }
-        function splitKey(key) {
-            const idx = key.lastIndexOf('/');
-            return idx < 0 ? { dir: '', file: key } : { dir: key.slice(0, idx + 1), file: key.slice(idx + 1) };
-        }
-
-        function s3Path(bucket, key) {
-            return 's3://' + bucket + '/' + key;
-        }
-
-        async function callApi(params) {
-            const api = apiUrlInput.value.trim();
-            if (!api) throw new Error('Lambda 함수 URL을 입력하세요.');
-            let url;
-            try { url = new URL(api); } catch (e) { throw new Error('Lambda 함수 URL 형식이 올바르지 않습니다.'); }
-            Object.keys(params).forEach((k) => url.searchParams.set(k, params[k]));
-
-            const response = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
-            const text = await response.text();
-            let data = null;
-            try { data = JSON.parse(text); } catch (e) {}
-            if (data && typeof data.body === 'string') {        // 프록시 형식 응답 대비
-                try { data = JSON.parse(data.body); } catch (e) {}
-            }
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status + ' - ' + ((data && data.error) || text || response.statusText));
-            }
-            return data !== null ? data : { content: text };
-        }
-
-        // POST 호출 (업로드처럼 내용이 큰 요청용)
-        //   Content-Type 을 text/plain 으로 보내면 브라우저 사전 요청(OPTIONS)이 생기지 않음
-        async function callApiPost(params) {
-            const api = apiUrlInput.value.trim();
-            if (!api) throw new Error('Lambda 함수 URL을 입력하세요.');
-            try { new URL(api); } catch (e) { throw new Error('Lambda 함수 URL 형식이 올바르지 않습니다.'); }
-
-            const response = await fetch(api, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-                body: JSON.stringify(params)
-            });
-            const text = await response.text();
-            let data = null;
-            try { data = JSON.parse(text); } catch (e) {}
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status + ' - ' + ((data && (data.error || data.message)) || text || response.statusText));
-            }
-            return data || {};
-        }
-
-        // ==========================================================
-        // 2. 목록 조회
-        // ==========================================================
-        async function handleFetch() {
-            const bucket = bucketInput.value.trim();
-            const prefix = normPrefix(dirInput.value);
-            dirInput.value = '/' + prefix;
-
-            if (!apiUrlInput.value.trim()) { showError('유효하지 않은 URL', 'Lambda 엔드포인트 URL을 입력해주세요.'); return; }
-            if (!bucket) { showError('버킷 이름 없음', '버킷 이름을 입력해주세요.'); return; }
-
-            storeSet('api', apiUrlInput.value.trim());
-            storeSet('bucket', bucket);
-            history.replaceState(null, '', '?' + new URLSearchParams({
-                api: apiUrlInput.value.trim(), bucket: bucket, prefix: prefix
-            }).toString());
-
-            setLoading(true);
-            hideError();
-
-            try {
-                const data = await callApi({ action: 'list', bucket_name: bucket, dir_name: prefix || '/' });
-                processListData(bucket, prefix, data);
-            } catch (err) {
-                console.error('Fetch error:', err);
-                state.items = [];
-                state.selected.clear();
-                showError('목록 조회 실패', '람다 엔드포인트 호출 중 오류가 발생했습니다: ' + err.message);
-                applyFiltersAndSort();
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        function processListData(bucket, prefix, data) {
-            // Lambda 가 실제로 조회한 prefix 기준으로 이름을 자름 ("root" 같은 입력도 안전)
-            if (typeof data.prefix === 'string') prefix = data.prefix;
-            dirInput.value = '/' + prefix;
-            const folders = (data.folders || []).map((f) => ({
-                type: 'folder',
-                key: f,
-                name: f.slice(prefix.length).replace(/\/$/, ''),
-                size: null,
-                modified: null
-            }));
-            const files = (data.files || []).map((f) => ({
-                type: 'file',
-                key: f.key,
-                name: f.key.slice(prefix.length),
-                size: f.size,
-                modified: f.last_modified
-            }));
-
-            state.bucket = bucket;
-            state.prefix = prefix;
-            state.items = folders.concat(files);
-            state.selected.clear();
-            state.lastSyncTime = new Date();
-            renderBreadcrumb();
-            applyFiltersAndSort();
-        }
-
-        function goTo(prefix) {
-            dirInput.value = '/' + prefix;
-            handleFetch();
-        }
-
-        function goUp() {
-            if (!state.prefix) return;
-            const trimmed = state.prefix.slice(0, -1);
-            const idx = trimmed.lastIndexOf('/');
-            goTo(idx < 0 ? '' : trimmed.slice(0, idx + 1));
-        }
-
-        function renderBreadcrumb() {
-            breadcrumb.innerHTML = '';
-            if (!state.bucket) {
-                breadcrumb.innerHTML = '<span class="text-slate-400">버킷을 조회하세요</span>';
-                upBtn.classList.add('hidden');
-                return;
-            }
-            const addLink = (label, prefix, isBucket) => {
-                const a = document.createElement('button');
-                a.type = 'button';
-                a.className = 'px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-aws-blue dark:text-blue-400 font-semibold';
-                a.innerHTML = (isBucket ? '<i class="fa-solid fa-bucket text-aws-orange mr-1.5"></i>' : '') + escapeHtml(label);
-                a.addEventListener('click', () => goTo(prefix));
-                breadcrumb.appendChild(a);
-            };
-            const addSep = () => {
-                const s = document.createElement('span');
-                s.className = 'text-slate-400';
-                s.textContent = '/';
-                breadcrumb.appendChild(s);
-            };
-            addLink(state.bucket, '', true);
-            let acc = '';
-            state.prefix.split('/').filter(Boolean).forEach((part) => {
-                acc += part + '/';
-                addSep();
-                addLink(part, acc, false);
-            });
-            upBtn.classList.toggle('hidden', !state.prefix);
-        }
-
-        function applyFiltersAndSort() {
-            let result = state.items.filter((it) => it.name.toLowerCase().includes(state.searchQuery));
-
-            result.sort((a, b) => {
-                if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;   // 폴더 먼저
-                if (state.sortBy === 'name-asc') return a.name.localeCompare(b.name);
-                if (state.sortBy === 'name-desc') return b.name.localeCompare(a.name);
-                if (state.sortBy === 'date-desc') return new Date(b.modified || 0) - new Date(a.modified || 0);
-                if (state.sortBy === 'date-asc') return new Date(a.modified || 0) - new Date(b.modified || 0);
-                if (state.sortBy === 'size-desc') return (b.size || 0) - (a.size || 0);
-                return 0;
-            });
-
-            state.filteredItems = result;
-            renderView();
-            updateStats();
-            updateSelectionUI();
-        }
-
-        function renderView() {
-            if (state.isLoading) return;
-            if (state.filteredItems.length === 0) {
-                tableView.classList.add('hidden');
-                gridView.classList.add('hidden');
-                emptyMessage.textContent = !state.bucket
-                    ? '버킷 이름을 입력하고 [목록 조회]를 누르세요.'
-                    : (state.items.length ? '검색 조건에 맞는 파일이 없습니다.' : '이 디렉토리에 파일이 없습니다.');
-                emptyState.classList.remove('hidden');
-                return;
-            }
-
-            emptyState.classList.add('hidden');
-            tableView.classList.toggle('hidden', state.viewMode !== 'table');
-            gridView.classList.toggle('hidden', state.viewMode !== 'grid');
-
-            renderTable();
-            renderGrid();
-        }
-
-        function actionButtons(it, compact) {
-            const base = compact
-                ? 'p-1.5 rounded-lg transition-colors '
-                : 'inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all shadow-sm ';
-            const label = (text) => compact ? '' : '<span>' + text + '</span>';
-            if (it.type === 'folder') {
-                return '<button data-act="open" title="열기" class="' + base + (compact
-                    ? 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30'
-                    : 'text-amber-700 border-amber-200 hover:bg-amber-500 hover:text-white dark:border-amber-900/60 dark:text-amber-400') + '">' +
-                    '<i class="fa-solid fa-folder-open"></i>' + label('열기') + '</button>';
-            }
-            return '<div class="inline-flex items-center gap-1.5">' +
-                '<button data-act="read" title="읽기" class="' + base + (compact
-                    ? 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
-                    : 'text-slate-700 border-slate-200 hover:bg-slate-800 hover:text-white dark:border-slate-600 dark:text-slate-300') + '">' +
-                    '<i class="fa-solid fa-book-open"></i>' + label('읽기') + '</button>' +
-                '<button data-act="copy" title="복사" class="' + base + (compact
-                    ? 'text-aws-blue hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30'
-                    : 'text-aws-blue border-blue-200 hover:bg-aws-blue hover:text-white dark:border-blue-900/60 dark:text-blue-400') + '">' +
-                    '<i class="fa-regular fa-copy"></i>' + label('복사') + '</button>' +
-                '<button data-act="delete" title="삭제" class="' + base + (compact
-                    ? 'text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/30'
-                    : 'text-rose-600 border-rose-200 hover:bg-rose-600 hover:text-white dark:border-rose-900/60 dark:text-rose-400') + '">' +
-                    '<i class="fa-regular fa-trash-can"></i>' + label('삭제') + '</button>' +
-                '</div>';
-        }
-
-        function checkbox(it) {
-            if (it.type !== 'file') return '';
-            return '<input type="checkbox" class="item-check rounded border-slate-300 text-aws-orange focus:ring-aws-orange"' +
-                (state.selected.has(it.key) ? ' checked' : '') + '>';
-        }
-
-        function renderTable() {
-            fileTableBody.innerHTML = state.filteredItems.map((it) => {
-                const isFolder = it.type === 'folder';
-                return '<tr data-key="' + escapeHtml(it.key) + '" data-type="' + it.type + '" class="hover:bg-slate-50/80 dark:hover:bg-slate-700/40 transition-colors">' +
-                    '<td class="pl-6 pr-2 py-4">' + checkbox(it) + '</td>' +
-                    '<td class="px-4 py-4 font-medium text-slate-900 dark:text-white">' +
-                        '<button data-act="' + (isFolder ? 'open' : 'read') + '" class="flex items-center space-x-3 text-left hover:text-aws-blue dark:hover:text-blue-400">' +
-                            '<i class="fa-solid ' + (isFolder ? 'fa-folder text-amber-500' : fileIcon(it.name) + ' text-aws-blue dark:text-blue-400') + ' text-lg w-5 text-center"></i>' +
-                            '<span class="font-mono text-xs sm:text-sm break-all">' + escapeHtml(it.name) + (isFolder ? '/' : '') + '</span>' +
-                        '</button>' +
-                    '</td>' +
-                    '<td class="px-4 py-4 text-xs whitespace-nowrap">' + (isFolder ? '<span class="text-slate-400">—</span>' : formatSize(it.size)) + '</td>' +
-                    '<td class="px-4 py-4 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">' + (isFolder
-                        ? '<span class="text-slate-400">—</span>'
-                        : '<div class="font-semibold">' + formatDate(it.modified) + '</div>' +
-                          '<div class="text-[11px] text-slate-400 dark:text-slate-500">' + formatRelativeTime(it.modified) + '</div>') +
-                    '</td>' +
-                    '<td class="px-6 py-4 text-right whitespace-nowrap">' + actionButtons(it, false) + '</td>' +
-                '</tr>';
-            }).join('');
-        }
-
-        function renderGrid() {
-            gridView.innerHTML = state.filteredItems.map((it) => {
-                const isFolder = it.type === 'folder';
-                return '<div data-key="' + escapeHtml(it.key) + '" data-type="' + it.type + '" class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">' +
-                    '<div>' +
-                        '<div class="flex items-start justify-between space-x-2 mb-3">' +
-                            '<button data-act="' + (isFolder ? 'open' : 'read') + '" class="p-2.5 rounded-lg ' + (isFolder
-                                ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-500'
-                                : 'bg-blue-50 dark:bg-blue-900/30 text-aws-blue dark:text-blue-400') + '">' +
-                                '<i class="fa-solid ' + (isFolder ? 'fa-folder' : fileIcon(it.name)) + ' text-xl"></i>' +
-                            '</button>' +
-                            checkbox(it) +
-                        '</div>' +
-                        '<h4 class="font-mono text-sm font-semibold text-slate-900 dark:text-white break-all mb-2">' + escapeHtml(it.name) + (isFolder ? '/' : '') + '</h4>' +
-                        '<p class="text-xs text-slate-500 dark:text-slate-400">' + (isFolder ? '폴더' : formatSize(it.size)) + '</p>' +
-                    '</div>' +
-                    '<div class="pt-4 mt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">' +
-                        '<span>' + (isFolder ? '' : '<i class="fa-regular fa-calendar mr-1.5"></i>' + formatDate(it.modified)) + '</span>' +
-                        actionButtons(it, true) +
-                    '</div>' +
-                '</div>';
-            }).join('');
-        }
-
-        function handleItemAction(e) {
-            const btn = e.target.closest('[data-act]');
-            if (!btn) return;
-            const holder = btn.closest('[data-key]');
-            if (!holder) return;
-            const key = holder.getAttribute('data-key');
-            const act = btn.getAttribute('data-act');
-            const target = { bucket: state.bucket, key: key };
-
-            if (act === 'open') goTo(key);
-            else if (act === 'read') readFile(target);
-            else if (act === 'copy') promptCopy(target);
-            else if (act === 'delete') promptDelete([target]);
-        }
-
-        // ==========================================================
-        // 선택 (다중 삭제용)
-        // ==========================================================
-        function handleItemCheck(e) {
-            if (!e.target.classList.contains('item-check')) return;
-            const key = e.target.closest('[data-key]').getAttribute('data-key');
-            if (e.target.checked) state.selected.add(key); else state.selected.delete(key);
-            syncCheckboxes(key, e.target.checked);
-            updateSelectionUI();
-        }
-
-        function syncCheckboxes(key, checked) {
-            document.querySelectorAll('[data-key]').forEach((el) => {
-                if (el.getAttribute('data-key') !== key) return;
-                const cb = el.querySelector('.item-check');
-                if (cb) cb.checked = checked;
-            });
-        }
-
-        function toggleSelectAll() {
-            const files = state.filteredItems.filter((it) => it.type === 'file');
-            files.forEach((it) => { if (selectAll.checked) state.selected.add(it.key); else state.selected.delete(it.key); });
-            renderTable();
-            renderGrid();
-            updateSelectionUI();
-        }
-
-        function updateSelectionUI() {
-            const files = state.filteredItems.filter((it) => it.type === 'file');
-            const checkedCount = files.filter((it) => state.selected.has(it.key)).length;
-            selectedCount.textContent = state.selected.size;
-            bulkDeleteBtn.disabled = state.selected.size === 0;
-            selectAll.checked = files.length > 0 && checkedCount === files.length;
-            selectAll.indeterminate = checkedCount > 0 && checkedCount < files.length;
-            selectAll.disabled = files.length === 0;
-        }
-
-        // ==========================================================
-        // 1. 읽기
-        // ==========================================================
-        function readFromInputs() {
-            const bucket = bucketInput.value.trim();
-            const prefix = normPrefix(dirInput.value);
-            const file = fileInput.value.trim().replace(/^\/+/, '');
-            dirInput.value = '/' + prefix;
-            if (!apiUrlInput.value.trim()) { showError('유효하지 않은 URL', 'Lambda 엔드포인트 URL을 입력해주세요.'); return; }
-            if (!bucket) { showError('버킷 이름 없음', '버킷 이름을 입력해주세요.'); return; }
-            if (!file) { showError('파일명 없음', '읽을 파일명을 입력해주세요.'); return; }
-            hideError();
-            readFile({ bucket: bucket, key: prefix + file });
-        }
-
-        async function readFile(target) {
-            const parts = splitKey(target.key);
-            state.viewerTarget = target;
-            $('viewerPath').textContent = s3Path(target.bucket, target.key);
-            $('viewerMeta').innerHTML = '';
-            setViewerContent('불러오는 중...', true);
-            openModal('viewerModal');
-
-            try {
-                const data = await callApi({
-                    action: 'read', bucket_name: target.bucket, dir_name: parts.dir || '/', file_name: parts.file
-                });
-                $('viewerMeta').innerHTML = [
-                    data.size != null ? '<i class="fa-solid fa-weight-hanging mr-1"></i>' + formatSize(data.size) : '',
-                    data.content_type ? '<i class="fa-solid fa-tag mr-1"></i>' + escapeHtml(data.content_type) : '',
-                    data.last_modified ? '<i class="fa-regular fa-clock mr-1"></i>' + formatDate(data.last_modified) : ''
-                ].filter(Boolean).map((t) =>
-                    '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600">' + t + '</span>'
-                ).join('');
-                setViewerContent(data.content != null ? data.content : JSON.stringify(data, null, 2), false);
-            } catch (err) {
-                setViewerContent('읽기 실패: ' + err.message, true, true);
-            }
-        }
-
-        function setViewerContent(text, disabled, isError) {
-            const pre = $('viewerContent');
-            pre.textContent = text;
-            pre.classList.toggle('text-rose-300', !!isError);
-            $('viewerClipBtn').disabled = !!disabled;
-            $('viewerCopyBtn').disabled = !!isError;
-            $('viewerDeleteBtn').disabled = !!isError;
-        }
-
-        async function copyViewerToClipboard() {
-            const btn = $('viewerClipBtn');
-            const label = btn.querySelector('span');
-            try {
-                await navigator.clipboard.writeText($('viewerContent').textContent);
-                label.textContent = '복사됨';
-            } catch (e) {
-                label.textContent = '복사 실패';
-            }
-            setTimeout(() => { label.textContent = '클립보드 복사'; }, 1500);
-        }
-
-        // ==========================================================
-        // 5. 복사
-        // ==========================================================
-        function promptCopy(source) {
-            const parts = splitKey(source.key);
-            const dot = parts.file.lastIndexOf('.');
-            const copyName = dot > 0 ? parts.file.slice(0, dot) + '_copy' + parts.file.slice(dot) : parts.file + '_copy';
-
-            state.copySource = source;
-            $('copySourcePath').textContent = s3Path(source.bucket, source.key);
-            $('copyBucket').value = source.bucket;
-            $('copyDir').value = '/' + parts.dir;
-            $('copyFile').value = copyName;
-            openModal('copyModal');
-            setTimeout(() => $('copyFile').focus(), 50);
-        }
-
-        async function executeCopy() {
-            const src = state.copySource;
-            if (!src) return;
-            const parts = splitKey(src.key);
-            const tBucket = $('copyBucket').value.trim() || src.bucket;
-            const tPrefix = normPrefix($('copyDir').value);
-            const tFile = $('copyFile').value.trim().replace(/^\/+/, '') || parts.file;
-
-            if (tBucket === src.bucket && tPrefix + tFile === src.key) {
-                alert('원본과 대상 경로가 같습니다. 대상 파일명이나 디렉토리를 바꾸세요.');
-                return;
-            }
-
-            setBusy('confirmCopyBtn', 'copySpinner', true);
-            try {
-                const data = await callApi({
-                    action: 'copy',
-                    bucket_name: src.bucket, dir_name: parts.dir || '/', file_name: parts.file,
-                    target_bucket: tBucket, target_dir: tPrefix || '/', target_file: tFile
-                });
-                showToast((data.message || '복사 완료') + ': ' + (data.target || s3Path(tBucket, tPrefix + tFile)));
-                closeModal('copyModal');
-                if (tBucket === state.bucket) setTimeout(handleFetch, 500);
-            } catch (err) {
-                console.error('Copy Error:', err);
-                alert('복사 처리 중 오류가 발생했습니다: ' + err.message);
-            } finally {
-                setBusy('confirmCopyBtn', 'copySpinner', false);
-            }
-        }
-
-        // ==========================================================
-        // 3. 삭제 / 4. 다중 객체 삭제
-        // ==========================================================
-        function promptDelete(targets) {
-            if (!targets.length) return;
-            state.deleteTargets = targets;
-            $('deleteTitle').textContent = targets.length > 1
-                ? 'S3 객체 ' + targets.length + '개 삭제 확인'
-                : 'S3 객체 삭제 확인';
-            $('deleteTargetList').innerHTML = targets.map((t) =>
-                '<li class="flex items-center space-x-2"><i class="fa-solid fa-file-lines text-aws-orange"></i><span>' +
-                escapeHtml(s3Path(t.bucket, t.key)) + '</span></li>'
-            ).join('');
-            openModal('deleteModal');
-        }
-
-        async function executeDelete() {
-            const targets = state.deleteTargets;
-            if (!targets.length) return;
-
-            setBusy('confirmDeleteBtn', 'deleteSpinner', true);
-            $('cancelDeleteBtn').disabled = true;
-
-            try {
-                let data;
-                if (targets.length === 1) {
-                    const parts = splitKey(targets[0].key);
-                    data = await callApi({
-                        action: 'delete', bucket_name: targets[0].bucket, dir_name: parts.dir || '/', file_name: parts.file
-                    });
-                    showToast((data.message || '삭제 완료') + ': ' + s3Path(targets[0].bucket, targets[0].key));
-                } else {
-                    // 다중 삭제는 현재 목록(같은 버킷·같은 디렉토리)에서 선택한 파일만 대상
-                    const names = targets.map((t) => t.key.slice(state.prefix.length));
-                    data = await callApi({
-                        action: 'delete_many', bucket_name: state.bucket, dir_name: state.prefix || '/',
-                        file_names: JSON.stringify(names)
-                    });
-                    const failed = (data.errors || []).length;
-                    showToast(failed
-                        ? '일부 삭제 실패: ' + (targets.length - failed) + '개 삭제, ' + failed + '개 실패'
-                        : targets.length + '개 파일 삭제 완료', failed ? 'error' : 'ok');
-                }
-
-                const deletedKeys = targets.map((t) => t.key);
-                deletedKeys.forEach((k) => state.selected.delete(k));
-                closeModal('deleteModal');
-                if (state.viewerTarget && deletedKeys.indexOf(state.viewerTarget.key) >= 0) closeModal('viewerModal');
-                if (targets[0].bucket === state.bucket) setTimeout(handleFetch, 500);
-            } catch (err) {
-                console.error('Delete Error:', err);
-                alert('삭제 처리 중 오류가 발생했습니다: ' + err.message);
-            } finally {
-                setBusy('confirmDeleteBtn', 'deleteSpinner', false);
-                $('cancelDeleteBtn').disabled = false;
-            }
-        }
-
-        // ==========================================================
-        // 6. 업로드 (여러 파일)
-        // ==========================================================
-        function promptUpload(files) {
-            if (!state.isUploading) {
-                $('uploadBucket').value = state.bucket || bucketInput.value.trim();
-                $('uploadDir').value = '/' + (state.bucket ? state.prefix : normPrefix(dirInput.value));
-                if (!state.uploadItems.some((it) => it.status === 'pending' || it.status === 'uploading')) {
-                    state.uploadItems = [];
-                }
-            }
-            if (files && files.length) addUploadFiles(files);
-            renderUploadList();
-            openModal('uploadModal');
-        }
-
-        function addUploadFiles(fileList) {
-            if (state.isUploading) return;
-            Array.from(fileList).forEach((file) => {
-                // 같은 이름은 마지막에 고른 파일로 교체
-                state.uploadItems = state.uploadItems.filter((it) => it.file.name !== file.name);
-                const tooBig = file.size > MAX_UPLOAD_BYTES;
-                state.uploadItems.push({
-                    file: file,
-                    status: tooBig ? 'invalid' : 'pending',
-                    message: tooBig ? '4 MB 초과 - 업로드 불가' : ''
-                });
-            });
-            renderUploadList();
-        }
-
-        function setupDropZone() {
-            const zone = $('dropZone');
-            ['dragenter', 'dragover'].forEach((ev) => zone.addEventListener(ev, (e) => {
-                e.preventDefault();
-                zone.classList.add('border-aws-orange', 'bg-amber-50');
-            }));
-            ['dragleave', 'drop'].forEach((ev) => zone.addEventListener(ev, (e) => {
-                e.preventDefault();
-                zone.classList.remove('border-aws-orange', 'bg-amber-50');
-            }));
-            zone.addEventListener('drop', (e) => {
-                if (e.dataTransfer && e.dataTransfer.files.length) addUploadFiles(e.dataTransfer.files);
-            });
-
-            // 페이지 아무 곳에나 파일을 떨어뜨리면 업로드 창을 열기
-            document.addEventListener('dragover', (e) => {
-                if (e.dataTransfer && Array.from(e.dataTransfer.types || []).indexOf('Files') >= 0) e.preventDefault();
-            });
-            document.addEventListener('drop', (e) => {
-                if (zone.contains(e.target)) return;
-                if (!e.dataTransfer || !e.dataTransfer.files.length) return;
-                e.preventDefault();
-                promptUpload(e.dataTransfer.files);
-            });
-        }
-
-        function uploadBadge(it) {
-            const styles = {
-                pending:   ['대기', 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600', 'fa-regular fa-clock'],
-                uploading: ['업로드 중', 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800', 'fa-solid fa-spinner fa-spin'],
-                done:      ['완료', 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800', 'fa-solid fa-circle-check'],
-                error:     ['실패', 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800', 'fa-solid fa-circle-exclamation'],
-                invalid:   ['제외', 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800', 'fa-solid fa-ban']
-            };
-            const s = styles[it.status];
-            return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap ' + s[1] + '">' +
-                '<i class="' + s[2] + ' mr-1"></i>' + s[0] + '</span>';
-        }
-
-        function renderUploadList() {
-            const items = state.uploadItems;
-            const list = $('uploadList');
-            list.innerHTML = items.map((it, i) =>
-                '<li class="flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">' +
-                    '<i class="fa-solid ' + fileIcon(it.file.name) + ' text-aws-blue dark:text-blue-400 w-4 text-center"></i>' +
-                    '<div class="flex-1 min-w-0">' +
-                        '<p class="font-mono text-xs font-semibold text-slate-800 dark:text-slate-100 truncate" title="' + escapeHtml(it.file.name) + '">' + escapeHtml(it.file.name) + '</p>' +
-                        '<p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">' + formatSize(it.file.size) +
-                            (it.message ? ' · <span class="' + (it.status === 'done' ? '' : 'text-rose-600 dark:text-rose-400') + '">' + escapeHtml(it.message) + '</span>' : '') +
-                        '</p>' +
-                    '</div>' +
-                    uploadBadge(it) +
-                    (state.isUploading || it.status === 'uploading' ? '' :
-                        '<button data-remove="' + i + '" title="목록에서 빼기" class="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"><i class="fa-solid fa-xmark"></i></button>') +
-                '</li>'
-            ).join('');
-
-            const total = items.reduce((sum, it) => sum + it.file.size, 0);
-            const finished = items.filter((it) => it.status === 'done').length;
-            const failed = items.filter((it) => it.status === 'error' || it.status === 'invalid').length;
-            const waiting = items.filter((it) => it.status === 'pending' || it.status === 'error').length;
-            $('uploadSummary').textContent = items.length
-                ? items.length + '개 파일 · 총 ' + formatSize(total) + ' · 완료 ' + finished + (failed ? ' · 실패/제외 ' + failed : '')
-                : '선택된 파일 없음';
-
-            const doneOrFailed = items.filter((it) => ['done', 'error', 'invalid'].indexOf(it.status) >= 0).length;
-            $('uploadProgress').style.width = (items.length ? Math.round(doneOrFailed / items.length * 100) : 0) + '%';
-
-            $('confirmUploadBtn').disabled = state.isUploading || waiting === 0;
-            $('confirmUploadLabel').textContent = state.isUploading
-                ? '업로드 중...'
-                : (items.some((it) => it.status === 'error') ? '실패한 파일 다시 업로드' : '업로드' + (waiting ? ' (' + waiting + ')' : ''));
-            $('cancelUploadBtn').disabled = state.isUploading;
-            $('uploadClearBtn').classList.toggle('invisible', !items.length || state.isUploading);
-        }
-
-        function readAsBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const result = String(reader.result || '');
-                    resolve(result.slice(result.indexOf(',') + 1));    // "data:...;base64," 앞부분 제거
-                };
-                reader.onerror = () => reject(new Error('파일을 읽을 수 없습니다.'));
-                reader.readAsDataURL(file);
-            });
-        }
-
-        async function executeUpload() {
-            const bucket = $('uploadBucket').value.trim();
-            const prefix = normPrefix($('uploadDir').value);
-            $('uploadDir').value = '/' + prefix;
-            const overwrite = $('uploadOverwrite').checked;
-            const targets = state.uploadItems.filter((it) => it.status === 'pending' || it.status === 'error');
-
-            if (!bucket) { alert('대상 버킷을 입력하세요.'); return; }
-            if (!targets.length) return;
-
-            state.isUploading = true;
-            setBusy('confirmUploadBtn', 'uploadSpinner', true);
-            renderUploadList();
-
-            let ok = 0, fail = 0;
-            for (const it of targets) {                       // 한 파일씩 순서대로 업로드
-                it.status = 'uploading';
-                it.message = '';
-                renderUploadList();
-                try {
-                    const content = await readAsBase64(it.file);
-                    const data = await callApiPost({
-                        action: 'upload',
-                        bucket_name: bucket,
-                        dir_name: prefix || '/',
-                        file_name: it.file.name,
-                        content: content,
-                        content_type: it.file.type || '',
-                        overwrite: overwrite
-                    });
-                    it.status = 'done';
-                    it.message = data.key ? 's3://' + bucket + '/' + data.key : '업로드 완료';
-                    ok++;
-                } catch (err) {
-                    it.status = 'error';
-                    it.message = err.message;
-                    fail++;
-                }
-                renderUploadList();
-            }
-
-            state.isUploading = false;
-            setBusy('confirmUploadBtn', 'uploadSpinner', false);
-            renderUploadList();
-
-            showToast(fail ? '업로드 ' + ok + '개 완료, ' + fail + '개 실패' : ok + '개 파일 업로드 완료', fail ? 'error' : 'ok');
-            if (ok && bucket === state.bucket && prefix === state.prefix) handleFetch();
-            else if (ok && !state.bucket) { bucketInput.value = bucket; dirInput.value = '/' + prefix; handleFetch(); }
-        }
-
-        // ==========================================================
-        // 모달 / 화면 상태
-        // ==========================================================
-        function openModal(id) {
-            const modal = $(id);
-            const box = modal.querySelector('.modal-box');
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                box.classList.remove('scale-95', 'opacity-0');
-                box.classList.add('scale-100', 'opacity-100');
-            }, 10);
-        }
-
-        function closeModal(id) {
-            if (id === 'uploadModal' && state.isUploading) return;   // 업로드 중에는 닫지 않음
-            const modal = $(id);
-            const box = modal.querySelector('.modal-box');
-            box.classList.remove('scale-100', 'opacity-100');
-            box.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                if (id === 'viewerModal') state.viewerTarget = null;
-                if (id === 'copyModal') state.copySource = null;
-                if (id === 'deleteModal') state.deleteTargets = [];
-                if (id === 'uploadModal' && !state.isUploading) {
-                    state.uploadItems = state.uploadItems.filter((it) => it.status === 'pending');
-                }
-            }, 200);
-        }
-
-        function setBusy(btnId, spinnerId, busy) {
-            $(btnId).disabled = busy;
-            $(spinnerId).classList.toggle('hidden', !busy);
-        }
-
-        function updateStats() {
-            const folders = state.items.filter((it) => it.type === 'folder');
-            const files = state.items.filter((it) => it.type === 'file');
-            $('statFolders').textContent = folders.length;
-            $('statFiles').textContent = files.length;
-            $('statSize').textContent = formatSize(files.reduce((sum, f) => sum + (f.size || 0), 0));
-            $('statLastSync').textContent = state.lastSyncTime ? state.lastSyncTime.toLocaleTimeString('ko-KR') : '동기화 안됨';
-        }
-
-        function setViewMode(mode) {
-            state.viewMode = mode;
-            const on = 'p-1.5 px-3 rounded-md text-xs font-medium bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm transition-all flex items-center space-x-1';
-            const off = 'p-1.5 px-3 rounded-md text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-all flex items-center space-x-1';
-            tableViewBtn.className = mode === 'table' ? on : off;
-            gridViewBtn.className = mode === 'grid' ? on : off;
-            renderView();
-        }
-
-        function setLoading(loading) {
-            state.isLoading = loading;
-            if (loading) {
-                loadingSkeleton.classList.remove('hidden');
-                tableView.classList.add('hidden');
-                gridView.classList.add('hidden');
-                emptyState.classList.add('hidden');
-                refreshIcon.classList.add('fa-spin');
-                fetchBtn.disabled = true;
-                refreshBtn.disabled = true;
-            } else {
-                loadingSkeleton.classList.add('hidden');
-                refreshIcon.classList.remove('fa-spin');
-                fetchBtn.disabled = false;
-                refreshBtn.disabled = false;
-                renderView();
-            }
-        }
-
-        function showError(title, msg) {
-            errorTitle.textContent = title;
-            errorMessage.textContent = msg;
-            errorBox.classList.remove('hidden');
-        }
-
-        function hideError() {
-            errorBox.classList.add('hidden');
-        }
-
-        // ==========================================================
-        // 표시 형식
-        // ==========================================================
-        function fileIcon(name) {
-            const ext = (name.split('.').pop() || '').toLowerCase();
-            if (['py', 'js', 'ts', 'java', 'go', 'sh', 'tf', 'json', 'yaml', 'yml', 'html', 'css'].indexOf(ext) >= 0) return 'fa-file-code';
-            if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].indexOf(ext) >= 0) return 'fa-file-image';
-            if (['zip', 'gz', 'tar', '7z'].indexOf(ext) >= 0) return 'fa-file-zipper';
-            if (ext === 'pdf') return 'fa-file-pdf';
-            return 'fa-file-lines';
-        }
-
-        function formatSize(n) {
-            if (n == null) return '';
-            const u = ['B', 'KB', 'MB', 'GB', 'TB'];
-            let i = 0;
-            while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
-            return (i ? n.toFixed(1) : n) + ' ' + u[i];
-        }
-
-        function formatDate(dateStr) {
-            const date = new Date(dateStr);
-            if (isNaN(date)) return dateStr || '';
-            return date.toLocaleString('ko-KR', {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-            });
-        }
-
-        function formatRelativeTime(dateStr) {
-            const date = new Date(dateStr);
-            if (isNaN(date)) return '';
-            const diffMin = Math.floor((new Date() - date) / (1000 * 60));
-            if (diffMin < 1) return '방금 전';
-            if (diffMin < 60) return diffMin + '분 전';
-            if (diffMin < 60 * 24) return Math.floor(diffMin / 60) + '시간 전';
-            const diffDays = Math.floor(diffMin / (60 * 24));
-            if (diffDays < 30) return diffDays + '일 전';
-            if (diffDays < 365) return Math.floor(diffDays / 30) + '개월 전';
-            return Math.floor(diffDays / 365) + '년 전';
-        }
-
-        function showToast(text, type) {
-            const isError = type === 'error';
-            const toast = document.createElement('div');
-            toast.className = 'fixed bottom-5 right-5 max-w-sm bg-aws-navy text-white text-xs px-4 py-2.5 rounded-lg shadow-xl z-[60] transition-all flex items-center space-x-2 border border-slate-700 break-all';
-            toast.innerHTML = '<i class="fa-solid ' + (isError ? 'fa-circle-exclamation text-rose-400' : 'fa-circle-check text-emerald-400') +
-                ' text-sm"></i><span>' + escapeHtml(text) + '</span>';
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-            }, 2800);
-        }
-
-        function escapeHtml(str) {
-            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-        }
-    </script>
+      } catch (e) {
+        set(e.message, "err");
+      }
+    }
+
+    function handleFiles(files) {
+      for (const f of files) upload(f);
+    }
+
+    fileInput.addEventListener("change", () => { handleFiles(fileInput.files); fileInput.value = ""; });
+    ["dragenter", "dragover"].forEach((ev) =>
+      drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+    ["dragleave", "drop"].forEach((ev) =>
+      drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+    drop.addEventListener("drop", (e) => handleFiles(e.dataTransfer.files));
+    document.getElementById("refresh").addEventListener("click", loadGallery);
+
+    loadGallery();
+  </script>
 </body>
 </html>

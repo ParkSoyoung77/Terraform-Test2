@@ -51,9 +51,31 @@ resource "aws_s3_bucket_policy" "std17_s3_bucket_policy" {
 }
 
 # ==================================================================
+# 썸네일용 폴더
+#   uploads/    : 원본 이미지 업로드 위치 (이벤트 알림 접두사)
+#   thumbnails/ : Lambda 가 만든 썸네일 저장 위치
+#   ※ S3 는 실제 폴더가 없어서, "/" 로 끝나는 빈 객체로 콘솔에 폴더처럼 표시
+#   ※ uploads/ 빈 객체도 생성 이벤트를 발생시키지만,
+#     확장자가 없어서 Lambda 에서 "변환할 수 없는 파일" 로 바로 종료됨
+# ==================================================================
+resource "aws_s3_object" "uploads_folder" {
+  bucket       = aws_s3_bucket.std17_s3_bucket.id
+  key          = "uploads/"
+  content_type = "application/x-directory"
+  content      = ""
+}
+
+resource "aws_s3_object" "thumbnails_folder" {
+  bucket       = aws_s3_bucket.std17_s3_bucket.id
+  key          = "thumbnails/"
+  content_type = "application/x-directory"
+  content      = ""
+}
+
+# ==================================================================
 # 웹사이트 파일 업로드
-#   index.html : S3 파일 목록 페이지
-#   페이지 Lambda 함수 URL 기본값을 templatefile 로 주입
+#   index.html : 썸네일 생성기 페이지 (uploads/ 업로드 + thumbnails/ 목록)
+#   S3 REST 엔드포인트를 templatefile 로 주입
 # ==================================================================
 resource "aws_s3_object" "index_html" {
   bucket        = aws_s3_bucket.std17_s3_bucket.id
@@ -61,7 +83,7 @@ resource "aws_s3_object" "index_html" {
   content_type  = "text/html; charset=utf-8"
   cache_control = "no-cache" # 재배포 후 바로 새 페이지가 보이도록
   content = templatefile("${local.web_dir}/index.html.tftpl", {
-    api_endpoint = var.api_endpoint
+    s3_endpoint = aws_s3_bucket.std17_s3_bucket.bucket_regional_domain_name
   })
 }
 
@@ -72,4 +94,3 @@ resource "aws_s3_object" "error_html" {
   source       = "${local.web_dir}/error.html"
   etag         = filemd5("${local.web_dir}/error.html")
 }
-

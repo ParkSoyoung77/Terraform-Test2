@@ -49,9 +49,9 @@ def lambda_handler(event, context):
     # ====================================================================
     # 저장될 버킷 정보 및 업로드
     filename = os.path.basename(object_key)
-    thumbnail_key = "thumbnails/{filename}"
+    thumbnail_key = f"thumbnails/{filename}"
 
-    content_type = "uploads/{'png' if img_format == 'PNG' else 'jpeg'}"
+    content_type = f"image/{'png' if img_format == 'PNG' else 'jpeg'}"
     s3_client.put_object(
         Bucket=bucket_name,
         Key=thumbnail_key,
