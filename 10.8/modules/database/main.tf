@@ -71,7 +71,10 @@ resource "aws_db_instance" "std17_mysql" {
         replace_triggered_by = [aws_db_subnet_group.std17_db_subnet_group.id]
     }
 
-    tags = { Name = "std17-rds-mysql" }
+    tags = {
+        Name         = "std17-rds-mysql"
+        AutoSchedule = "true"   # FinOps 스케줄 대상
+    }
 }
 
 # ================================================================
