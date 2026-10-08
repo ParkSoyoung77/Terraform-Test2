@@ -163,3 +163,158 @@ resource "aws_s3_bucket_notification" "thumbnail_event" {
 
   depends_on = [aws_lambda_permission.allow_s3]
 }
+
+# ##################################################################
+#   FinOps 함수 (eventbridge_scheduler_finops.py)
+#   EventBridge Scheduler → Lambda → EC2 / RDS 시작·중지
+# ##################################################################
+
+locals {
+  finops_function_name = "eventbridge_scheduler_finops"
+  finops_source_file   = "${path.module}/s3_function/eventbridge_scheduler_finops.py"
+}
+
+# ==================================================================
+# [FinOps] 배포 패키지
+# ==================================================================
+
+data "archive_file" "finops_zip" {
+  type        = "zip"
+  source_file = local.finops_source_file
+  output_path = "${path.module}/build/eventbridge_scheduler_finops.zip"
+}
+
+# ==================================================================
+# [FinOps] Lambda 실행 역할 / 권한
+# ==================================================================
+
+resource "aws_iam_role" "finops_lambda_role" {
+  name = "${local.finops_function_name}-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "lambda.amazonaws.com" }
+        Action    = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = { Name = "${local.finops_function_name}-role" }
+}
+
+resource "aws_iam_role_policy" "finops_lambda_policy" {
+  name = "${local.finops_function_name}-policy"
+  role = aws_iam_role.finops_lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "CloudWatchLogs"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      },
+      {
+        Sid    = "EC2StartStop"
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeInstances",
+          "ec2:StartInstances",
+          "ec2:StopInstances"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "RDSStartStop"
+        Effect = "Allow"
+        Action = [
+          "rds:DescribeDBInstances",
+          "rds:ListTagsForResource",
+          "rds:StartDBInstance",
+          "rds:StopDBInstance"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# ==================================================================
+# [FinOps] Lambda 함수
+# ==================================================================
+
+resource "aws_cloudwatch_log_group" "finops" {
+  name              = "/aws/lambda/${local.finops_function_name}"
+  retention_in_days = 7
+}
+
+resource "aws_lambda_function" "finops" {
+  function_name = local.finops_function_name
+  role          = aws_iam_role.finops_lambda_role.arn
+
+  filename         = data.archive_file.finops_zip.output_path
+  source_code_hash = data.archive_file.finops_zip.output_base64sha256
+
+  handler     = "eventbridge_scheduler_finops.lambda_handler" # 파일명.함수명
+  runtime     = "python3.14"
+  timeout     = 60 # EC2/RDS 여러 대 처리 대비
+  memory_size = 128
+
+  depends_on = [
+    aws_iam_role_policy.finops_lambda_policy,
+    aws_cloudwatch_log_group.finops,
+  ]
+
+  tags = { Name = local.finops_function_name }
+}
+
+# ==================================================================
+# [FinOps] EventBridge Scheduler 역할 (Lambda 호출 권한)
+# ==================================================================
+
+resource "aws_iam_role" "finops_scheduler_role" {
+  name = "${local.finops_function_name}-scheduler-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "scheduler.amazonaws.com" }
+        Action    = "sts:AssumeRole"
+        Condition = {
+          StringEquals = { "aws:SourceAccount" = data.aws_caller_identity.current.account_id }
+        }
+      }
+    ]
+  })
+
+  tags = { Name = "${local.finops_function_name}-scheduler-role" }
+}
+
+resource "aws_iam_role_policy" "finops_scheduler_invoke" {
+  name = "${local.finops_function_name}-scheduler-invoke"
+  role = aws_iam_role.finops_scheduler_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = ["lambda:InvokeFunction"]
+        Resource = [
+          aws_lambda_function.finops.arn,         # 함수 자체
+          "${aws_lambda_function.finops.arn}:*"   # 버전 / 별칭
+        ]
+      }
+    ]
+  })
+}
