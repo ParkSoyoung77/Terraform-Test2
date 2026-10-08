@@ -82,7 +82,7 @@ def manage_rds(action):
 
         # 대상 태그가 존재하는 DB 인스턴스에 대해서만 시작/중지 판단하여 수행
         if is_target:
-            if action=="start" and status == "stopped":
+            if action =="start" and status == "stopped":
                 rds_client.start_db_instance(DBInstanceIdentifier=db_id)
                 logger.info(f"RDS 시작 명령 완료: {db_id}")
             elif action == "stop" and status == "available":
