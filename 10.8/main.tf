@@ -77,7 +77,8 @@ module "storage" {
 # Lambda: DB 연결 확인 함수 (VPC) + S3 버킷 함수
 # ====================================================
 module "lambda" {
-    source = "./modules/lambda"
+  source         = "./modules/lambda"
+  s3_bucket_name = var.bucket_name
 }
 
 
