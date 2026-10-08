@@ -50,3 +50,24 @@ resource "aws_route" "private_nat" {
     destination_cidr_block = "0.0.0.0/0"
     network_interface_id   = aws_instance.nat.primary_network_interface_id
 }
+
+# ####################################################
+# 2. FinOps 대상 인스턴스 — EventBridge Scheduler로 시작/중지
+#    태그 AutoSchedule = "true" 가 Lambda 의 대상 조건
+# ####################################################
+resource "aws_instance" "finops_target" {
+    ami                    = data.aws_ami.al2023.id
+    instance_type          = "t3.micro"
+    subnet_id              = var.nat_subnet_id   # NAT 와 같은 서브넷 (변수 추가 없이 사용)
+    vpc_security_group_ids = var.nat_sg_ids
+    key_name               = var.key_name
+
+    lifecycle {
+        ignore_changes = [ami]
+    }
+
+    tags = {
+        Name         = "${var.tag_header}finops-instance"
+        AutoSchedule = "true"
+    }
+}
