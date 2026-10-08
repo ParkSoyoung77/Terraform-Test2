@@ -1,6 +1,6 @@
 import json, os, boto3, urllib.parse
 
-def lamba_handler(evnet, context):
+def lambda_handler(event, context):
     s3_client = boto3.client("s3")
 
     # S3에 지정된 이벤트
