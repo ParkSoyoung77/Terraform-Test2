@@ -29,7 +29,7 @@ variable "nat_instance_type" {
 }
 
 variable "bucket_name" {
-  description = "S3 웹사이트 버킷 이름"
+  description = "S3 버킷 이름"
   type        = string
-  default     = "std17-eu-west-2-bucket"   
+  default     = "std17-eu-west-2-bucket"
 }

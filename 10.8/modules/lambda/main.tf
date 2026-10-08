@@ -23,6 +23,25 @@ data "archive_file" "lambda_zip" {
 }
 
 # ==================================================================
+# Pillow 레이어
+#   layer/python/PIL ... 구조 → zip 안에 python/ 폴더가 최상위로 들어감
+# ==================================================================
+
+data "archive_file" "pillow_layer_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/layer"
+  output_path = "${path.module}/build/pillow_layer.zip"
+}
+
+resource "aws_lambda_layer_version" "pillow" {
+  layer_name          = "std17-pillow-layer"
+  filename            = data.archive_file.pillow_layer_zip.output_path
+  source_code_hash    = data.archive_file.pillow_layer_zip.output_base64sha256
+  compatible_runtimes = ["python3.14"]
+  compatible_architectures = ["x86_64"]
+}
+
+# ==================================================================
 # IAM 역할 / 권한
 # ==================================================================
 
@@ -94,8 +113,7 @@ resource "aws_lambda_function" "this" {
   timeout     = 30
   memory_size = 256
 
-  # Pillow 레이어 (PIL 사용 시 필수) — ARN 준비되면 주석 해제
-  # layers = [var.pillow_layer_arn]
+  layers = [aws_lambda_layer_version.pillow.arn]
 
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic,

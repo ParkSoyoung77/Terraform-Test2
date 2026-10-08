@@ -1,29 +1,32 @@
 # === 1. 보안 및 환경 변수 (최우선 제외) ===
-.env                # API 키, DB 비밀번호 등 민감 정보
+# API 키, DB 비밀번호 등 민감 정보
+.env
 .env.*
 !.env.example
-*.pem               # AWS 접속용 키 페어
-*.key               # 암호화 키 파일
-.aws/               # AWS 자격증명 실수 방지
+# AWS 접속용 키 페어 / 암호화 키
+*.pem
+*.key
+# AWS 자격증명 실수 방지
+.aws/
 
 # === 2. Python 가상 환경 및 패키지 ===
-venv/               # 가상 환경 폴더 (주로 사용하는 이름)
-.venv/              # 표준 가상 환경 폴더
+venv/
+.venv/
 env/
 bin/
 lib/
 include/
 
 # === 3. Python 캐시 및 컴파일 파일 ===
-__pycache__/        # 런타임 시 생성되는 바이트코드 캐시
-*.py[cod]           # .pyc, .pyo, .pyd 파일
+__pycache__/
+*.py[cod]
 *$py.class
 
 # === 4. 운영체제 및 도구 설정 ===
-.DS_Store           # macOS 전용 시스템 파일
-Thumbs.db           # Windows 전용 썸네일 파일
-.vscode/            # VS Code 개인 설정 (팀별로 다를 수 있음)
-.idea/              # PyCharm 설정 파일
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
 *.swp
 
 # === 5. 빌드 및 배포 결과물 ===
@@ -45,7 +48,7 @@ crash.*.log
 *.tfvars
 *.tfvars.json
 !*.tfvars.example
-*.auto.tfvars        # 로컬 개발/테스트용 (환경별로 나눴을 때 공유 X)
+*.auto.tfvars
 *.auto.tfvars.json
 
 # Terraform lock 파일 및 CLI 설정
@@ -61,7 +64,6 @@ override.tf.json
 *tfplan*
 *.tfplan
 *.backup
-# !example_override.tf   # 버전 관리에 포함하고 싶은 override 파일은 이렇게 예외 처리
 
 # === 7. 각 모듈 내부 state/캐시 대비 ===
 **/modules/**/.terraform/*
