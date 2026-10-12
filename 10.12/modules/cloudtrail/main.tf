@@ -1,8 +1,11 @@
 data "aws_caller_identity" "current" {}
 
 # ==================================================================
-# [Trail] S3 버킷 정책 (CloudTrail 로그 쓰기 허용)
+# [Trail] S3 버킷 정책
+#   - 정적 웹사이트 공개 읽기 (기존 PublicReadGetObject)
+#   - CloudTrail 로그 쓰기 허용
 #   ※ aws_s3_bucket_policy 는 버킷 정책을 "통째로" 덮어씀
+#     → 이 버킷의 정책은 여기 한 곳에서만 관리할 것
 # ==================================================================
 
 resource "aws_s3_bucket_policy" "trail" {
@@ -11,6 +14,13 @@ resource "aws_s3_bucket_policy" "trail" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "arn:aws:s3:::${local.trail_bucket_name}/*"
+      },
       {
         Sid       = "AWSCloudTrailAclCheck"
         Effect    = "Allow"
@@ -149,8 +159,7 @@ resource "aws_cloudtrail" "security_audit" {
   name           = local.trail_name
   s3_bucket_name = local.trail_bucket_name
 
-  # 기본값
-  is_multi_region_trail         = false
+  is_multi_region_trail         = false # 단일 리전 (eu-west-2)
   include_global_service_events = true
   enable_log_file_validation    = true
   enable_logging                = true

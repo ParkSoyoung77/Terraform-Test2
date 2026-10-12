@@ -108,4 +108,6 @@ module "cloudtrail" {
   source = "./modules/cloudtrail"
 
   trail_bucket_name = "std17-eu-west-2-bucket"
+
+  depends_on = [module.storage]
 }
