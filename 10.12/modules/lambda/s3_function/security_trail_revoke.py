@@ -35,12 +35,35 @@ def lambda_handler(event, context):
     # 이벤트를 발생(실행)시킨 사용자 또는역할의 ARN 반환
     user_identity = detail.get("userIdentity", {}).get('arn', '')
 
-    # 중요: 이 Lambda 자신의 역할이 일으킨 이벤트는 무시
-    if "security_trail_revoke-role" in user_identity:
+    ec2_client = boto3.client("ec2")
+
+    # 중요: 중복 메시지 발송을 막기 위한 이중 이벤트 제어
+    if "std17SecurityAutoRemediationRole" in user_identity:
         return
 
     req_params = detail.get("requestParameters", {})
     group_id = req_params.get("groupId")
+
+    ip_perms = req_params.get("ipPermissions", {})  # 보안 그룹 인바운드 규칙
+    perms_list = ip_perms if isinstance(ip_perms, list) else ip_perms.get("items", [])
+
+    for perm in perms_list:
+        if perm.get("fromPort") == 22 or perm.get("toPort") == 22:
+            ip_ranges = perm.get("ipRanges", {})
+            ranges_list = ip_ranges if isinstance(ip_ranges, list) else ip_ranges.get("items", [])
+
+            # 0.0.0.0/0 이 포함된 경우에만 삭제
+            if any(r.get("cidrIp") == "0.0.0.0/0" for r in ranges_list):
+                # 인바운드 규칙 삭제
+                ec2_client.revoke_security_group_ingress(
+                    GroupId=group_id,
+                    IpPermissions=[{
+                        "IpProtocol": str(perm.get("ipProtocol", "tcp")),
+                        "FromPort": perm.get("fromPort"),
+                        "ToPort": perm.get("toPort"),
+                        "IpRanges": [{"CidrIp": "0.0.0.0/0"}]
+                    }]
+                )
 
     # 슬랙에 전송할 메세지 설정
     message = (
