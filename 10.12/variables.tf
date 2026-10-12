@@ -33,3 +33,9 @@ variable "bucket_name" {
   type        = string
   default     = "std17-eu-west-2-bucket"
 }
+
+variable "slack_webhook_url" {
+  description = "Slack Incoming Webhook URL (security_trail_revoke 알림용)"
+  type        = string
+  sensitive   = true
+}
