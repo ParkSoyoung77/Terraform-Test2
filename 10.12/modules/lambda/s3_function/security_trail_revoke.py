@@ -47,32 +47,35 @@ def lambda_handler(event, context):
     ip_perms = req_params.get("ipPermissions", {})  # 보안 그룹 인바운드 규칙
     perms_list = ip_perms if isinstance(ip_perms, list) else ip_perms.get("items", [])
 
+    revoked = False
+
     for perm in perms_list:
         if perm.get("fromPort") == 22 or perm.get("toPort") == 22:
             ip_ranges = perm.get("ipRanges", {})
             ranges_list = ip_ranges if isinstance(ip_ranges, list) else ip_ranges.get("items", [])
 
             # 0.0.0.0/0 이 포함된 경우에만 삭제
-            if any(r.get("cidrIp") == "0.0.0.0/0" for r in ranges_list):
-                # 인바운드 규칙 삭제
-                ec2_client.revoke_security_group_ingress(
-                    GroupId=group_id,
-                    IpPermissions=[{
-                        "IpProtocol": str(perm.get("ipProtocol", "tcp")),
-                        "FromPort": perm.get("fromPort"),
-                        "ToPort": perm.get("toPort"),
-                        "IpRanges": [{"CidrIp": "0.0.0.0/0"}]
-                    }]
-                )
+            for r in ranges_list:
+                if r.get("cidrIp") == "0.0.0.0/0":
+                    # 인바운드 규칙 삭제
+                    ec2_client.revoke_security_group_ingress(
+                        GroupId=group_id,
+                        IpPermissions=[{
+                            "IpProtocol": str(perm.get("ipProtocol", "tcp")),
+                            "FromPort": perm.get("fromPort"),
+                            "ToPort": perm.get("toPort"),
+                            "IpRanges": [{"CidrIp": "0.0.0.0/0"}]
+                        }]
+                    )
 
-    # 슬랙에 전송할 메세지 설정
-    message = (
-        f"● *[보안 위험 자동 차단 완료]*\n"
-        f"● *보안 그룹 ID*: '{group_id}'\n"
-        f"● *위반 작업자*: '{user_identity}'\n"
-        f"● *위반 내용*: SSH(22) 포트 '0.0.0.0/0' 퍼블릭 오픈\n"
-        f"● *보안 그룹 ID*: 해당 Inbound Rule 자동 삭제 처리됨 "
-    )
+                    # 슬랙에 전송할 메세지 설정
+                    message = (
+                        f"● *[보안 위험 자동 차단 완료]*\n"
+                        f"● *보안 그룹 ID*: '{group_id}'\n"
+                        f"● *위반 작업자*: '{user_identity}'\n"
+                        f"● *위반 내용*: SSH(22) 포트 '0.0.0.0/0' 퍼블릭 오픈\n"
+                        f"● *조치 내용*: 해당 Inbound Rule 자동 삭제 처리됨 "
+                    )
     
-    # 메세지 전송 함수 호출
-    send_slack_message(message)
+                    # 메세지 전송 함수 호출
+                    send_slack_message(message)
