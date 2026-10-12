@@ -150,7 +150,7 @@ resource "aws_cloudtrail" "security_audit" {
   s3_bucket_name = local.trail_bucket_name
 
   # 기본값
-  is_multi_region_trail         = true
+  is_multi_region_trail         = false
   include_global_service_events = true
   enable_log_file_validation    = true
   enable_logging                = true
