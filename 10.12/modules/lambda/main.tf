@@ -318,3 +318,103 @@ resource "aws_iam_role_policy" "finops_scheduler_invoke" {
     ]
   })
 }
+
+# ##################################################################
+#   Security 함수 (security_trail_revoke.py)
+#   보안그룹 인바운드 규칙 자동 회수
+# ##################################################################
+
+locals {
+  sg_revoke_function_name = "security_trail_revoke"
+  sg_revoke_source_file   = "${path.module}/s3_function/security_trail_revoke.py"
+}
+
+# ==================================================================
+# [Security] 배포 패키지
+# ==================================================================
+
+data "archive_file" "sg_revoke_zip" {
+  type        = "zip"
+  source_file = local.sg_revoke_source_file
+  output_path = "${path.module}/build/security_trail_revoke.zip"
+}
+
+# ==================================================================
+# [Security] Lambda 실행 역할 / 권한
+# ==================================================================
+
+resource "aws_iam_role" "sg_revoke_lambda_role" {
+  name = "${local.sg_revoke_function_name}-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Service = "lambda.amazonaws.com" }
+        Action    = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = { Name = "${local.sg_revoke_function_name}-role" }
+}
+
+resource "aws_iam_role_policy" "sg_revoke_lambda_policy" {
+  name = "${local.sg_revoke_function_name}-policy"
+  role = aws_iam_role.sg_revoke_lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "CloudWatchLogs"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      },
+      {
+        Sid    = "SecurityGroupRevoke"
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeSecurityGroups",
+          "ec2:RevokeSecurityGroupIngress"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# ==================================================================
+# [Security] Lambda 함수
+# ==================================================================
+
+resource "aws_cloudwatch_log_group" "sg_revoke" {
+  name              = "/aws/lambda/${local.sg_revoke_function_name}"
+  retention_in_days = 7
+}
+
+resource "aws_lambda_function" "sg_revoke" {
+  function_name = local.sg_revoke_function_name
+  role          = aws_iam_role.sg_revoke_lambda_role.arn
+
+  filename         = data.archive_file.sg_revoke_zip.output_path
+  source_code_hash = data.archive_file.sg_revoke_zip.output_base64sha256
+
+  handler     = "security_trail_revoke.lambda_handler" # 파일명.함수명
+  runtime     = "python3.14"
+  timeout     = 30
+  memory_size = 128
+
+  depends_on = [
+    aws_iam_role_policy.sg_revoke_lambda_policy,
+    aws_cloudwatch_log_group.sg_revoke,
+  ]
+
+  tags = { Name = local.sg_revoke_function_name }
+}
