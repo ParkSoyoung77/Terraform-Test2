@@ -33,11 +33,14 @@ def send_slack_message(message):
 def lambda_handler(event, context):
     detail = event("detail", {})   # 이벤트 페이로드에서 정보 반환
     # 이벤트를 발생(실행)시킨 사용자 또는역할의 ARN 반환
-    user_identity = detail.get("userIdentity", {})
-    
-    # 중요:
+    user_identity = detail.get("userIdentity", {}).get('arn', '')
+
+    # 중요: 이 Lambda 자신의 역할이 일으킨 이벤트는 무시
     if "security_trail_revoke-role" in user_identity:
         return
+
+    req_params = detail.get("requestParameters", {})
+    group_id = req_params.get("groupId")
 
     # 슬랙에 전송할 메세지 설정
     message = (
