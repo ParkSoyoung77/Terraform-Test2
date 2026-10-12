@@ -21,10 +21,14 @@ def lambda_handler(event, context):
         headers = {'Content-Type': 'application/json'}
     )
 
-    # 만들어진 데이터(req)를 슬랙에 전송
-    urllib.request.urlopen(req)
+    try:
+        # 만들어진 데이터(req)를 슬랙에 전송
+        urllib.request.urlopen(req)
 
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Test Message Send Successfully!!!')
-    }
+        return {
+            'statusCode': 200,
+            'body': json.dumps('Test Message Send Successfully!!!')
+        }
+    except Exception as e:
+        print(f"Slack 알림 전송 실패: {e}")
+        return e
