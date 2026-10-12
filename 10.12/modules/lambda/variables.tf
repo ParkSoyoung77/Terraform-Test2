@@ -8,3 +8,9 @@ variable "secret_name" {
   type        = string
   default     = "project/db/password"
 }
+
+variable "slack_webhook_url" {
+  description = "Slack Incoming Webhook URL (security_trail_revoke 알림용)"
+  type        = string
+  sensitive   = true
+}

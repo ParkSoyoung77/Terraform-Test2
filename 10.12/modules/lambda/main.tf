@@ -406,10 +406,16 @@ resource "aws_lambda_function" "sg_revoke" {
   filename         = data.archive_file.sg_revoke_zip.output_path
   source_code_hash = data.archive_file.sg_revoke_zip.output_base64sha256
 
-  handler     = "security_trail_revoke.lambda_handler" # 파일명.함수명
+  handler     = "security_trail_revoke.lambda_handler"
   runtime     = "python3.14"
   timeout     = 30
   memory_size = 128
+
+  environment {
+    variables = {
+      SLACK_WEBHOOK_URL = var.slack_webhook_url
+    }
+  }
 
   depends_on = [
     aws_iam_role_policy.sg_revoke_lambda_policy,

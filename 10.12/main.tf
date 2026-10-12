@@ -69,6 +69,7 @@ module "database" {
 # ====================================================
 module "storage" {
     source = "./modules/storage"
+    
     bucket_name  = var.bucket_name
 }
 
@@ -77,7 +78,9 @@ module "storage" {
 # ====================================================
 module "lambda" {
   source         = "./modules/lambda"
+
   s3_bucket_name = var.bucket_name
+  slack_webhook_url = var.slack_webhook_url
 }
 
 
