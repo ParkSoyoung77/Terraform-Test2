@@ -236,5 +236,13 @@ resource "aws_security_group" "std17_cloudtrail_sg" {
     name   = "${var.tag_header}cloudtrail-sg"
     vpc_id = var.vpc_id
 
+    ingress {
+        description = "SSH"
+        from_port   = 22
+        to_port     = 22
+        protocol    = "tcp"
+        cidr_blocks = var.admin_cidr_blocks
+    }
+
     tags = { Name = "${var.tag_header}cloudtrail-sg" }
 }
