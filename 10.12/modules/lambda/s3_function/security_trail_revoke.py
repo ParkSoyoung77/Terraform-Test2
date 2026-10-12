@@ -44,6 +44,11 @@ def lambda_handler(event, context):
     req_params = detail.get("requestParameters", {})
     group_id = req_params.get("groupId")
 
+    # # [적용 예외] group_id 활용
+    # nat_instance_sg_id=""
+    # if group_id == nat_instance_sg_id:
+    #     return
+
     ip_perms = req_params.get("ipPermissions", {})  # 보안 그룹 인바운드 규칙
     perms_list = ip_perms if isinstance(ip_perms, list) else ip_perms.get("items", [])
 
@@ -70,11 +75,11 @@ def lambda_handler(event, context):
 
                     # 슬랙에 전송할 메세지 설정
                     message = (
-                        f"● *[보안 위험 자동 차단 완료]*\n"
-                        f"● *보안 그룹 ID*: '{group_id}'\n"
-                        f"● *위반 작업자*: '{user_identity}'\n"
-                        f"● *위반 내용*: SSH(22) 포트 '0.0.0.0/0' 퍼블릭 오픈\n"
-                        f"● *조치 내용*: 해당 Inbound Rule 자동 삭제 처리됨 "
+                        f"● 🚨 *[보안 위험 자동 차단 완료]* 🚨\n"
+                        f"● 🛡️ *보안 그룹 ID*: '{group_id}'\n"
+                        f"● 👤 *위반 작업자*: '{user_identity}'\n"
+                        f"● ⚠️ *위반 내용*: SSH(22) 포트 '0.0.0.0/0' 퍼블릭 오픈\n"
+                        f"● ✅ *조치 내용*: 해당 Inbound Rule 자동 삭제 처리됨 "
                     )
     
                     # 메세지 전송 함수 호출
