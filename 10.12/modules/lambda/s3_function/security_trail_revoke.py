@@ -31,7 +31,7 @@ def send_slack_message(message):
         return e
 
 def lambda_handler(event, context):
-    detail = event("detail", {})   # 이벤트 페이로드에서 정보 반환
+    detail = event.get("detail", {})   # 이벤트 페이로드에서 정보 반환
     # 이벤트를 발생(실행)시킨 사용자 또는역할의 ARN 반환
     user_identity = detail.get("userIdentity", {}).get('arn', '')
 
