@@ -1,0 +1,96 @@
+# ==================================================================
+# 요구사항
+#   1) Nginx Container - ASG/ALB - Amazon Linux(t3.micro, 10GB), Docker
+#   2) RDB - MySQL, Instance  (RDS MySQL 단일 DB 인스턴스)
+#   3) EKS
+# ==================================================================
+
+# ==================================================================
+# 1. 네트워크 (VPC, public 3 / private 3 / eks전용 private 3, NAT 1)
+# ==================================================================
+module "network" {
+    source      = "./modules/network"
+    name_prefix = var.name_prefix
+    vpc_cidr    = var.vpc_cidr
+    az_count    = var.az_count
+}
+
+# ==================================================================
+# 2. 보안그룹 (ALB -> EC2 -> RDS)
+# ==================================================================
+module "security" {
+    source      = "./modules/security"
+    name_prefix = var.name_prefix
+    vpc_id      = module.network.vpc_id
+}
+
+# ==================================================================
+# 3. IAM (EC2 인스턴스 프로파일: SSM 접속 + ECR pull)
+# ==================================================================
+module "iam" {
+    source      = "./modules/iam"
+    name_prefix = var.name_prefix
+}
+
+# ==================================================================
+# 4. ALB (퍼블릭 서브넷, HTTP 80 -> nginx 타겟그룹)
+# ==================================================================
+module "alb" {
+    source            = "./modules/alb"
+    name_prefix       = var.name_prefix
+    vpc_id            = module.network.vpc_id
+    public_subnet_ids = module.network.public_subnet_ids
+    security_group_id = module.security.alb_sg_id
+}
+
+# ==================================================================
+# 5. Compute: ASG + Launch Template
+#    Amazon Linux 2023 / t3.micro / 루트 10GB / Docker로 nginx 컨테이너 실행
+# ==================================================================
+module "compute" {
+    source                = "./modules/compute"
+    name_prefix           = var.name_prefix
+    subnet_ids            = module.network.private_subnet_ids
+    security_group_id     = module.security.ec2_sg_id
+    instance_profile_name = module.iam.ec2_instance_profile_name
+    key_name              = var.key_name
+    alb_target_group_arn  = module.alb.target_group_arn
+
+    # NAT 경로가 준비된 뒤 인스턴스가 떠야 docker 설치/이미지 pull 이 성공함
+    depends_on = [module.network]
+}
+
+# ==================================================================
+# 6. RDS MySQL (단일 DB 인스턴스, 프라이빗 서브넷)
+# ==================================================================
+module "rds" {
+    source             = "./modules/rds"
+    name_prefix        = var.name_prefix
+    private_subnet_ids = module.network.private_subnet_ids
+    security_group_id  = module.security.rds_sg_id
+}
+
+# ==================================================================
+# 7. EKS (클러스터 + 관리형 노드그룹, EKS 전용 프라이빗 서브넷)
+# ==================================================================
+module "eks" {
+    source             = "./modules/eks"
+    name_prefix        = var.name_prefix
+    private_subnet_ids = module.network.eks_private_subnet_ids
+    cluster_name       = "${var.name_prefix}-eks-cluster"
+    node_group_name    = "${var.name_prefix}-eks-nodegroup"
+}
+
+# ==================================================================
+# 8. 루트 레벨 보안그룹 규칙 (모듈 간 순환참조 회피)
+# ==================================================================
+# EKS 관리형 노드에는 클러스터 기본 SG가 붙으므로 그 SG를 소스로 허용
+resource "aws_security_group_rule" "rds_from_eks_node" {
+    type                     = "ingress"
+    from_port                = 3306
+    to_port                  = 3306
+    protocol                 = "tcp"
+    security_group_id        = module.security.rds_sg_id
+    source_security_group_id = module.eks.cluster_primary_security_group_id
+    description              = "eks node to RDS"
+}
