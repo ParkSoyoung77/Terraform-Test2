@@ -33,9 +33,17 @@ output "igw_id" {
     value       = aws_internet_gateway.std17_vpc_igw.id
 }
 
-output "nat_id" {
-    description = "NAT 게이트웨이 ID"
-    value       = aws_nat_gateway.std17_nat.id
+output "nat_subnet_id" {
+    description = "NAT 인스턴스를 둘 퍼블릭 서브넷 ID (첫 번째 AZ)"
+    value       = aws_subnet.std17_public_subnets[local.nat_subnet_key].id
+}
+
+output "private_route_table_ids" {
+    description = "NAT 인스턴스 경로를 추가할 프라이빗 라우팅 테이블 (key -> id)"
+    value = {
+        private = aws_route_table.std17_vpc_private_rt.id
+        eks     = aws_route_table.std17_vpc_eks_private_rt.id
+    }
 }
 
 output "public_rt_id" {

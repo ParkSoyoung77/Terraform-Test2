@@ -92,32 +92,10 @@ resource "aws_subnet" "std17_private_subnets" {
     }
 }
 
-# EIP 할당
-resource "aws_eip" "std17_nat_eip" {
-    domain = "vpc"
-    tags = {
-        Name = "${local.tag_header}-nat-eip"
-    }
-}
-
-# NAT 게이트웨이 (첫 번째 퍼블릭 서브넷)
-resource "aws_nat_gateway" "std17_nat" {
-    allocation_id = aws_eip.std17_nat_eip.id
-    subnet_id     = aws_subnet.std17_public_subnets[local.nat_subnet_key].id
-    depends_on    = [aws_internet_gateway.std17_vpc_igw]
-    tags = {
-        Name = "${local.tag_header}-nat"
-    }
-}
-
 # 프라이빗 라우팅 테이블
+# 0.0.0.0/0 -> NAT 인스턴스 경로는 nat-instance 모듈의 aws_route 로 추가
 resource "aws_route_table" "std17_vpc_private_rt" {
     vpc_id = aws_vpc.std17_vpc.id
-
-    route {
-        cidr_block     = "0.0.0.0/0"
-        nat_gateway_id = aws_nat_gateway.std17_nat.id
-    }
 
     tags = {
         Name = "${local.tag_header}-vpc-private-rt"
@@ -147,13 +125,9 @@ resource "aws_subnet" "std17_eks_private_subnets" {
 }
 
 # eks 전용 라우팅 테이블
+# 0.0.0.0/0 -> NAT 인스턴스 경로는 nat-instance 모듈의 aws_route 로 추가
 resource "aws_route_table" "std17_vpc_eks_private_rt" {
     vpc_id = aws_vpc.std17_vpc.id
-
-    route {
-        cidr_block     = "0.0.0.0/0"
-        nat_gateway_id = aws_nat_gateway.std17_nat.id
-    }
 
     tags = {
         Name = "${local.tag_header}-vpc-eks-private-rt"

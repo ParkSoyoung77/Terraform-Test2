@@ -12,3 +12,8 @@ output "rds_sg_id" {
     description = "RDS 보안그룹 ID"
     value       = aws_security_group.std17_rds_sg.id
 }
+
+output "nat_sg_id" {
+    description = "NAT 인스턴스 보안그룹 ID"
+    value       = aws_security_group.std17_nat_sg.id
+}

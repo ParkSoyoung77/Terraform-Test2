@@ -3,6 +3,16 @@ output "vpc_id" {
     value       = module.network.vpc_id
 }
 
+output "nat_instance_id" {
+    description = "NAT 인스턴스 ID"
+    value       = module.nat_instance.nat_instance_id
+}
+
+output "nat_public_ip" {
+    description = "NAT 인스턴스 퍼블릭 IP"
+    value       = module.nat_instance.nat_public_ip
+}
+
 # ---------------- ALB / ASG ----------------
 output "alb_url" {
     description = "nginx 접속 주소 (ALB)"

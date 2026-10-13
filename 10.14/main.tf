@@ -6,7 +6,7 @@
 # ==================================================================
 
 # ==================================================================
-# 1. 네트워크 (VPC, public 3 / private 3 / eks전용 private 3, NAT 1)
+# 1-1. 네트워크 (VPC, public 3 / private 3 / eks전용 private 3, NAT 1)
 # ==================================================================
 module "network" {
     source      = "./modules/network"
@@ -16,12 +16,27 @@ module "network" {
 }
 
 # ==================================================================
+# 1-2. NAT 인스턴스 (NAT 게이트웨이 대체)
+#      private / eks 라우팅 테이블에 0.0.0.0/0 -> NAT 인스턴스 경로 추가
+# ==================================================================
+module "nat_instance" {
+    source                  = "./modules/nat-instance"
+    name_prefix             = var.name_prefix
+    key_name                = var.key_name
+    instance_profile_name   = module.iam.ec2_instance_profile_name
+    nat_subnet_id           = module.network.nat_subnet_id
+    nat_sg_ids              = [module.security.nat_sg_id]
+    private_route_table_ids = module.network.private_route_table_ids
+}
+
+# ==================================================================
 # 2. 보안그룹 (ALB -> EC2 -> RDS)
 # ==================================================================
 module "security" {
     source      = "./modules/security"
     name_prefix = var.name_prefix
     vpc_id      = module.network.vpc_id
+    vpc_cidr    = module.network.vpc_cidr
 }
 
 # ==================================================================
@@ -57,7 +72,7 @@ module "compute" {
     alb_target_group_arn  = module.alb.target_group_arn
 
     # NAT 경로가 준비된 뒤 인스턴스가 떠야 docker 설치/이미지 pull 이 성공함
-    depends_on = [module.network]
+    depends_on = [module.nat_instance, module.network]
 }
 
 # ==================================================================
@@ -79,6 +94,9 @@ module "eks" {
     private_subnet_ids = module.network.eks_private_subnet_ids
     cluster_name       = "${var.name_prefix}-eks-cluster"
     node_group_name    = "${var.name_prefix}-eks-nodegroup"
+
+    # 노드가 클러스터에 조인하려면 외부(ECR 등) 통신 경로가 먼저 있어야 함
+    depends_on = [module.nat_instance, module.network]
 }
 
 # ==================================================================
