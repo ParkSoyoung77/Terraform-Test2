@@ -37,6 +37,9 @@ module "security" {
     name_prefix = var.name_prefix
     vpc_id      = module.network.vpc_id
     vpc_cidr    = module.network.vpc_cidr
+
+    # 내 PC -> NAT 인스턴스 SSH 허용 IP
+    ssh_allowed_cidrs = var.ssh_allowed_cidrs
 }
 
 # ==================================================================
@@ -94,6 +97,10 @@ module "eks" {
     private_subnet_ids = module.network.eks_private_subnet_ids
     cluster_name       = "${var.name_prefix}-eks-cluster"
     node_group_name    = "${var.name_prefix}-eks-nodegroup"
+
+    # 노드 SSH: NAT 인스턴스(점프 호스트)에서만 22 허용
+    node_ssh_key_name      = var.key_name
+    node_ssh_source_sg_ids = [module.security.nat_sg_id]
 
     # 노드가 클러스터에 조인하려면 외부(ECR 등) 통신 경로가 먼저 있어야 함
     depends_on = [module.nat_instance, module.network]

@@ -104,3 +104,27 @@ resource "aws_security_group" "std17_nat_sg" {
         Name = "${var.name_prefix}-nat-sg"
     }
 }
+
+# ==================================================================
+# SSH 점프 경로: 내 PC -> NAT 인스턴스(22) -> 프라이빗 EC2(22)
+resource "aws_security_group_rule" "std17_nat_ssh_from_admin" {
+    count = length(var.ssh_allowed_cidrs) > 0 ? 1 : 0
+
+    type              = "ingress"
+    from_port         = 22
+    to_port           = 22
+    protocol          = "tcp"
+    security_group_id = aws_security_group.std17_nat_sg.id
+    cidr_blocks       = var.ssh_allowed_cidrs
+    description       = "SSH from admin PC to NAT(jump host)"
+}
+
+resource "aws_security_group_rule" "std17_ec2_ssh_from_nat" {
+    type                     = "ingress"
+    from_port                = 22
+    to_port                  = 22
+    protocol                 = "tcp"
+    security_group_id        = aws_security_group.std17_ec2_sg.id
+    source_security_group_id = aws_security_group.std17_nat_sg.id
+    description              = "SSH from NAT(jump host) to ASG instances"
+}

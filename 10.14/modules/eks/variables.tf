@@ -68,3 +68,15 @@ variable "admin_principal_arns" {
     type        = list(string)
     default     = []
 }
+
+variable "node_ssh_key_name" {
+    description = "노드 SSH 키페어 이름 (null이면 노드 SSH 비활성화)"
+    type        = string
+    default     = null
+}
+
+variable "node_ssh_source_sg_ids" {
+    description = "노드 SSH(22)를 허용할 보안그룹 ID 리스트 (NAT 점프 호스트 SG)"
+    type        = list(string)
+    default     = []
+}

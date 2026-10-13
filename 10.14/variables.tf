@@ -28,3 +28,9 @@ variable "key_name" {
     default     = "std17-key"
     nullable    = true
 }
+
+variable "ssh_allowed_cidrs" {
+    description = "NAT 인스턴스(점프 호스트)에 SSH 접속을 허용할 내 PC 공인 IP (예: [\"1.2.3.4/32\"]). 빈 리스트면 SSH 차단"
+    type        = list(string)
+    default     = []
+}

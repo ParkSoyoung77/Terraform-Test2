@@ -114,6 +114,16 @@ resource "aws_eks_node_group" "std17_test_eks_nodegroup" {
         max_unavailable = 1
     }
 
+    # 노드 SSH: 키페어 지정 시 EKS가 22번 허용 SG를 만들어 노드에 붙임
+    # (주의: remote_access 추가/변경 시 노드그룹이 재생성됨)
+    dynamic "remote_access" {
+        for_each = var.node_ssh_key_name == null ? [] : [1]
+        content {
+            ec2_ssh_key               = var.node_ssh_key_name
+            source_security_group_ids = var.node_ssh_source_sg_ids
+        }
+    }
+
     depends_on = [
         aws_iam_role_policy_attachment.std17_test_eks_worker_node_policy,
         aws_iam_role_policy_attachment.std17_test_eks_cni_policy,
