@@ -3,9 +3,12 @@ locals {
 
   # 지표별로 ASG 라인 생성 (범례는 표시 이름으로)
   metrics = {
-    for m in local.metric_names : m => [
-      for label, name in var.asgs : ["AWS/EC2", m, "AutoScalingGroupName", name, { label = label }]
-    ]
+    for m in local.metric_names : m => concat(
+      # 표시용: 빈 구간을 0으로 채운 선
+      [for i, label in keys(var.asgs) : [{ expression = "FILL(r${i}, 0)", label = label, id = "e${i}" }]],
+      # 원본 지표 (숨김)
+      [for i, label in keys(var.asgs) : ["AWS/EC2", m, "AutoScalingGroupName", var.asgs[label], { id = "r${i}", visible = false }]]
+    )
   }
 
   widget_defs = [

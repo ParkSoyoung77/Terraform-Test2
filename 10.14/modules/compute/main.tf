@@ -52,6 +52,11 @@ resource "aws_launch_template" "std17_nginx" {
         http_put_response_hop_limit = 2
     }
 
+    # 세부 모니터링 (1분 간격 지표)
+    monitoring {
+        enabled = true
+    }
+
     user_data = filebase64("${path.module}/scripts/user_data.sh")
 
     tag_specifications {
