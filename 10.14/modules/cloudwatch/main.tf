@@ -17,7 +17,7 @@ locals {
         annotations = { horizontal = [{ label = "${var.cpu_threshold}% 경고", value = var.cpu_threshold, color = "#d62728" }] }
       }
     },
-    { title = "상태 검사 실패",       metric = "StatusCheckFailed", stat = "Maximum", extra = {} },
+    { title = "상태 검사 실패",       metric = "StatusCheckFailed", stat = "Maximum", extra = { view = "singleValue", sparkline = true } },
     { title = "Network In (Bytes)",  metric = "NetworkIn",         stat = "Sum",     extra = {} },
     { title = "Network Out (Bytes)", metric = "NetworkOut",        stat = "Sum",     extra = {} },
     { title = "EBS Read (Bytes)",    metric = "EBSReadBytes",      stat = "Sum",     extra = {} },
