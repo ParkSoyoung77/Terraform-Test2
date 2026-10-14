@@ -126,6 +126,7 @@ resource "aws_security_group_rule" "rds_from_eks_node" {
 module "cloudwatch" {
     source         = "./modules/cloudwatch"
     dashboard_name = "std17-instance-board"
+    region         = "eu-west-2"
     period         = 60
 
     asgs = {
