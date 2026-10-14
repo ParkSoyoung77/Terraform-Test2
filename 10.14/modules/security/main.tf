@@ -129,20 +129,3 @@ resource "aws_security_group" "std17_nat_sg" {
         Name = "${var.name_prefix}-nat-sg"
     }
 }
-
-# ==================================================================
-# 예전에 별도 리소스로 만들었던 SSH 규칙 → state 에서만 제거 (AWS 규칙은 삭제하지 않음)
-# 한 번 apply 후에는 이 두 블록을 지워도 됨
-removed {
-    from = aws_security_group_rule.std17_nat_ssh_from_admin
-    lifecycle {
-        destroy = false
-    }
-}
-
-removed {
-    from = aws_security_group_rule.std17_ec2_ssh_from_nat
-    lifecycle {
-        destroy = false
-    }
-}
