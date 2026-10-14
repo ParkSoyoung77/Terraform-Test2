@@ -15,16 +15,13 @@ resource "aws_iam_role" "std17_ec2_role" {
     }
 }
 
+# ECR 이미지 pull
 resource "aws_iam_role_policy_attachment" "std17_ec2_ecr_readonly" {
     role       = aws_iam_role.std17_ec2_role.name
     policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
-resource "aws_iam_role_policy_attachment" "std17_ec2_ssm_core" {
-    role       = aws_iam_role.std17_ec2_role.name
-    policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
+# SSM Session Manager 접속
 resource "aws_iam_role_policy_attachment" "std17_ec2_ssm_core" {
     role       = aws_iam_role.std17_ec2_role.name
     policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
