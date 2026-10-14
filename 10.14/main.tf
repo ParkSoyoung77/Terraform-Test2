@@ -133,6 +133,9 @@ module "cloudwatch" {
         "nginx-asg" = module.compute.asg_name
         "eks-node"  = module.eks.node_asg_name
     }
+
+    log_dashboard_name = "std17-log-board"
+    syslog_group_name  = "std17-system-syslog"
 }
 
 # ==================================================================

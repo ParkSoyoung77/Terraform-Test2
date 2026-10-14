@@ -23,3 +23,16 @@ variable "cpu_threshold" {
   type    = number
   default = 80
 }
+
+# =====================================================
+variable "log_dashboard_name" {
+  description = "로그 대시보드 이름"
+  type        = string
+  default     = "std17-log-board"
+}
+
+variable "syslog_group_name" {
+  description = "CW 에이전트가 수집하는 시스템 로그 그룹"
+  type        = string
+  default     = "std17-system-syslog"
+}

@@ -9,3 +9,8 @@ output "dashboard_arn" {
 output "dashboard_url" {
   value = "https://${var.region}.console.aws.amazon.com/cloudwatch/home?region=${var.region}#dashboards:name=${aws_cloudwatch_dashboard.this.dashboard_name}"
 }
+
+# =====================================================
+output "log_dashboard_url" {
+  value = "https://${var.region}.console.aws.amazon.com/cloudwatch/home?region=${var.region}#dashboards:name=${aws_cloudwatch_dashboard.logs.dashboard_name}"
+}

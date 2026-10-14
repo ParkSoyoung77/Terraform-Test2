@@ -79,6 +79,19 @@ cat > /opt/aws/amazon-cloudwatch-agent/bin/config.json <<'EOF'
         "metrics_collection_interval": 60
       }
     }
+  },
+  "logs": {
+    "logs_collected":{
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/syslog", 
+            "log_group_name": "std17-system-syslog", 
+            "log_stream_name": "{instance_id}" 
+          }
+        ]
+      }
+    }
   }
 }
 EOF
