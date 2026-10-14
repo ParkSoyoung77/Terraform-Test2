@@ -134,3 +134,13 @@ module "cloudwatch" {
         "eks-node"  = module.eks.node_asg_name
     }
 }
+
+# ==================================================================
+# 10. VPC 플로우 로그 (CloudWatch Logs)
+# ==================================================================
+module "flow_log" {
+    source         = "./modules/flow-log"
+    vpc_id         = module.network.vpc_id
+    flow_log_name  = "std17-vpc-flow-log"
+    log_group_name = "std17VPCFrontLogs"
+}
