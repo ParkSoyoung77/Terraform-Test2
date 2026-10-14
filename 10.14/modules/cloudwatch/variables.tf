@@ -1,11 +1,11 @@
 variable "region" {
   type    = string
-  default = "ap-northeast-3"
+  default = "eu-west-2"
 }
 
 variable "dashboard_name" {
   type    = string
-  default = "instance-board"
+  default = "std17-instance-board"
 }
 
 variable "instance_ids" {
