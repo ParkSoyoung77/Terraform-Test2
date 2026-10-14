@@ -39,6 +39,8 @@ HTML
 #    - /opt/nginx/html : 웹 페이지 (읽기 전용)
 #    - /var/log/nginx  : nginx 로그를 호스트에 저장 (CW 에이전트 수집용)
 mkdir -p /var/log/nginx
+chown -R root:adm /var/log/nginx   # 소유자 root, 그룹 adm (로그 열람 그룹)
+chmod 750 /var/log/nginx           # root 읽기/쓰기, adm 그룹 읽기, 그 외 접근 차단
 
 docker run -d \
   --name nginx \
