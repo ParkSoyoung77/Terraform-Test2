@@ -125,7 +125,7 @@ resource "aws_security_group_rule" "rds_from_eks_node" {
 # ==================================================================
 module "cloudwatch" {
     source         = "./modules/cloudwatch"
-    dashboard_name = "instance-board"
+    dashboard_name = "std17-instance-board"
 
     asg_names    = [
         module.compute.asg_name,
