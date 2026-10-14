@@ -1,8 +1,8 @@
 locals {
-  cpu_metrics     = [for id in var.instance_ids : ["AWS/EC2", "CPUUtilization", "InstanceId", id]]
-  status_metrics  = [for id in var.instance_ids : ["AWS/EC2", "StatusCheckFailed", "InstanceId", id]]
-  net_in_metrics  = [for id in var.instance_ids : ["AWS/EC2", "NetworkIn", "InstanceId", id]]
-  net_out_metrics = [for id in var.instance_ids : ["AWS/EC2", "NetworkOut", "InstanceId", id]]
-  ebs_r_metrics   = [for id in var.instance_ids : ["AWS/EC2", "EBSReadBytes", "InstanceId", id]]
-  ebs_w_metrics   = [for id in var.instance_ids : ["AWS/EC2", "EBSWriteBytes", "InstanceId", id]]
+  cpu_metrics     = [for label, name in var.asgs : ["AWS/EC2", "CPUUtilization",    "AutoScalingGroupName", name, { label = label }]]
+  status_metrics  = [for label, name in var.asgs : ["AWS/EC2", "StatusCheckFailed", "AutoScalingGroupName", name, { label = label }]]
+  net_in_metrics  = [for label, name in var.asgs : ["AWS/EC2", "NetworkIn",         "AutoScalingGroupName", name, { label = label }]]
+  net_out_metrics = [for label, name in var.asgs : ["AWS/EC2", "NetworkOut",        "AutoScalingGroupName", name, { label = label }]]
+  ebs_r_metrics   = [for label, name in var.asgs : ["AWS/EC2", "EBSReadBytes",      "AutoScalingGroupName", name, { label = label }]]
+  ebs_w_metrics   = [for label, name in var.asgs : ["AWS/EC2", "EBSWriteBytes",     "AutoScalingGroupName", name, { label = label }]]
 }

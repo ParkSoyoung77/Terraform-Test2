@@ -8,16 +8,10 @@ variable "dashboard_name" {
   default = "std17-instance-board"
 }
 
-variable "instance_ids" {
-  description = "고정 EC2 인스턴스 ID 목록 (예: NAT 인스턴스)"
-  type        = list(string)
-  default     = []
-}
-
-variable "asg_names" {
-  description = "Auto Scaling Group 이름 목록 (compute ASG, EKS 노드그룹 ASG)"
-  type        = list(string)
-  default     = []
+variable "asgs" {
+  description = "범례 표시 이름 => ASG 이름"
+  type        = map(string)
+  default     = {}
 }
 
 variable "period" {

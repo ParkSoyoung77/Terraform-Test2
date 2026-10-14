@@ -127,8 +127,8 @@ module "cloudwatch" {
     source         = "./modules/cloudwatch"
     dashboard_name = "std17-instance-board"
 
-    asg_names    = [
-        module.compute.asg_name,
-        module.eks.node_asg_name,
-    ]
+    asgs = {
+        "nginx-asg" = module.compute.asg_name
+        "eks-node"  = module.eks.node_asg_name
+    }
 }
