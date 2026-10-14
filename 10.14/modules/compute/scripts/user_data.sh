@@ -85,7 +85,7 @@ cat > /opt/aws/amazon-cloudwatch-agent/bin/config.json <<'EOF'
       "files": {
         "collect_list": [
           {
-            "file_path": "/var/log/syslog", 
+            "file_path": "/var/log/messages", 
             "log_group_name": "std17-system-syslog", 
             "log_stream_name": "{instance_id}" 
           }
