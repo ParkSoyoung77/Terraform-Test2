@@ -5,10 +5,13 @@ exec > >(tee /var/log/user-data.log) 2>&1
 
 # ── 1. 패키지 업데이트 및 설치 ─────────────────────────
 dnf update -y
-dnf install -y docker unzip amazon-cloudwatch-agent stress-ng httpd-tools
+dnf install -y docker unzip amazon-cloudwatch-agent stress-ng httpd-tools rsyslog
 
 systemctl enable --now docker
 usermod -aG docker ec2-user
+
+# 시스템 로그를 /var/log/messages 파일로 남기기 (CW 에이전트 수집용)
+systemctl enable --now rsyslog
 
 # ── 2. 인스턴스 정보 조회 (IMDSv2) ─────────────────────
 TOKEN=$(curl -sX PUT "http://169.254.169.254/latest/api/token" \
@@ -33,11 +36,16 @@ cat > /opt/nginx/html/index.html <<HTML
 HTML
 
 # ── 4. nginx 컨테이너 실행 (호스트 80 -> 컨테이너 80) ───
+#    - /opt/nginx/html : 웹 페이지 (읽기 전용)
+#    - /var/log/nginx  : nginx 로그를 호스트에 저장 (CW 에이전트 수집용)
+mkdir -p /var/log/nginx
+
 docker run -d \
   --name nginx \
   --restart always \
   -p 80:80 \
   -v /opt/nginx/html:/usr/share/nginx/html:ro \
+  -v /var/log/nginx:/var/log/nginx \
   nginx:stable
 
 # ── 5. Docker Compose 플러그인 (실패해도 계속 진행) ─────
@@ -49,12 +57,13 @@ curl -fSL https://github.com/docker/compose/releases/latest/download/docker-comp
   || echo "WARN: docker compose 설치 실패"
 
 # ── 6. CloudWatch Agent 설정 ──────────────────────────
+#    run_as_user = root : /var/log/messages 등 root 전용 로그 파일을 읽기 위함
 mkdir -p /opt/aws/amazon-cloudwatch-agent/bin/
 cat > /opt/aws/amazon-cloudwatch-agent/bin/config.json <<'EOF'
 {
   "agent": {
     "metrics_collection_interval": 60,
-    "run_as_user": "cwagent"
+    "run_as_user": "root"
   },
   "metrics": {
     "namespace": "CWAgent",
@@ -81,13 +90,23 @@ cat > /opt/aws/amazon-cloudwatch-agent/bin/config.json <<'EOF'
     }
   },
   "logs": {
-    "logs_collected":{
+    "logs_collected": {
       "files": {
         "collect_list": [
           {
-            "file_path": "/var/log/messages", 
-            "log_group_name": "std17-system-syslog", 
-            "log_stream_name": "{instance_id}" 
+            "file_path": "/var/log/messages",
+            "log_group_name": "std17-system-syslog",
+            "log_stream_name": "{instance_id}"
+          },
+          {
+            "file_path": "/var/log/nginx/access.log",
+            "log_group_name": "std17-nginx-access",
+            "log_stream_name": "{instance_id}"
+          },
+          {
+            "file_path": "/var/log/nginx/error.log",
+            "log_group_name": "std17-nginx-error",
+            "log_stream_name": "{instance_id}"
           }
         ]
       }
