@@ -119,3 +119,16 @@ resource "aws_security_group_rule" "rds_from_eks_node" {
     source_security_group_id = module.eks.cluster_primary_security_group_id
     description              = "eks node to RDS"
 }
+
+# ==================================================================
+# 9. CloudWatch 대시보드 (Nginx ASG + EKS 노드 ASG)
+# ==================================================================
+module "cloudwatch" {
+    source         = "./modules/cloudwatch"
+    dashboard_name = "instance-board"
+
+    asg_names    = [
+        module.compute.asg_name,
+        module.eks.node_asg_name,
+    ]
+}
