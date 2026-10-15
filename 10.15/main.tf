@@ -186,3 +186,11 @@ resource "aws_iam_role_policy" "ec2_invoke_log_lambda" {
         }]
     })
 }
+
+# ==================================================================
+# 14. EC2 역할 → X-Ray 트레이스 전송 권한 (데몬 → X-Ray API)
+# ==================================================================
+resource "aws_iam_role_policy_attachment" "ec2_xray" {
+    role       = module.iam.ec2_role_name
+    policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+}
