@@ -48,7 +48,7 @@ variable "asg_desired_capacity" {
 
 variable "asg_max_size" {
     type    = number
-    default = 3
+    default = 1
 }
 
 variable "alb_target_group_arn" {
