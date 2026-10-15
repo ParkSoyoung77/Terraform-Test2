@@ -29,6 +29,7 @@ resource "aws_security_group" "std17_alb_sg" {
 #  ※ 인바운드는 전부 인라인 ingress 로 관리
 #    (인라인 ingress + aws_security_group_rule 을 같은 SG에 섞으면
 #     apply 때 SG 리소스가 별도 규칙을 지워버림)
+# (+) fastapi를 위한 8000 추가
 resource "aws_security_group" "std17_ec2_sg" {
     name        = "${var.name_prefix}-ec2-sg"
     vpc_id      = var.vpc_id
@@ -46,6 +47,14 @@ resource "aws_security_group" "std17_ec2_sg" {
         description     = "SSH from NAT(jump host)"
         from_port       = 22
         to_port         = 22
+        protocol        = "tcp"
+        security_groups = [aws_security_group.std17_nat_sg.id]
+    }
+
+    ingress {
+        description     = "FastAPI from NAT(jump host)"
+        from_port       = 8000
+        to_port         = 8000
         protocol        = "tcp"
         security_groups = [aws_security_group.std17_nat_sg.id]
     }
