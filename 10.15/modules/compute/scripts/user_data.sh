@@ -59,6 +59,19 @@ curl -fSL --retry 5 --retry-delay 5 \
   && chmod +x "$DOCKER_PLUGIN_DIR/docker-compose" \
   || echo "WARN: docker compose 설치 실패"
 
+# ── 5-1. Docker Buildx 최신 버전 ───────────────────────
+#    AL2023 docker 패키지의 buildx는 0.12.1 → Compose build는 0.17 이상 필요
+#    /usr/local/lib 경로가 패키지 경로(/usr/libexec)보다 우선 적용됨 (dnf update 영향 없음)
+BUILDX_DIR="/usr/local/lib/docker/cli-plugins"
+mkdir -p "$BUILDX_DIR"
+BUILDX_VER=$(curl -fsSLI --retry 5 -o /dev/null -w '%{url_effective}' \
+  https://github.com/docker/buildx/releases/latest | sed 's#.*/tag/##')
+curl -fSL --retry 5 --retry-delay 5 \
+  "https://github.com/docker/buildx/releases/download/${BUILDX_VER}/buildx-${BUILDX_VER}.linux-amd64" \
+  -o "$BUILDX_DIR/docker-buildx" \
+  && chmod +x "$BUILDX_DIR/docker-buildx" \
+  || echo "WARN: docker buildx 설치 실패"
+
 # ── 6. CloudWatch Agent 설정 ──────────────────────────
 #    run_as_user = root : /var/log/messages 등 root 전용 로그 파일을 읽기 위함
 mkdir -p /opt/aws/amazon-cloudwatch-agent/bin/
