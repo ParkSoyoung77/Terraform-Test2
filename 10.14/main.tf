@@ -147,11 +147,3 @@ module "flow_log" {
     flow_log_name  = "std17-vpc-flow-log"
     log_group_name = "std17VPCFrontLogs"
 }
-
-# ==================================================================
-# 11. 로그 저장용 S3 버킷
-# ==================================================================
-module "storage" {
-    source      = "./modules/storage"
-    bucket_name = "std17-eu-west-2-log-bucket"
-}
