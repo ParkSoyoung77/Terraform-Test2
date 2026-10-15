@@ -19,11 +19,19 @@ resource "aws_iam_role" "std17_lambda_role" {
     tags = { Name = "${var.name_prefix}-log-lambda-role" }
 }
 
+# CloudWatch Logs 기록 권한
 resource "aws_iam_role_policy_attachment" "std17_lambda_basic" {
     role       = aws_iam_role.std17_lambda_role.name
     policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# X-Ray 트레이스 전송 권한 (Active tracing 용)
+resource "aws_iam_role_policy_attachment" "std17_lambda_xray" {
+    role       = aws_iam_role.std17_lambda_role.name
+    policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+}
+
+# fastapi-logs/ 경로에만 쓰기
 resource "aws_iam_role_policy" "std17_lambda_s3_put" {
     name = "${var.name_prefix}-log-lambda-s3-put"
     role = aws_iam_role.std17_lambda_role.id
@@ -62,11 +70,17 @@ resource "aws_lambda_function" "std17_log_saver" {
         }
     }
 
+    # X-Ray Active tracing: 함수 실행(초기화/호출 시간)을 트레이스 맵에 별도 노드로 표시
+    tracing_config {
+        mode = "Active"
+    }
+
     depends_on = [
         aws_iam_role_policy_attachment.std17_lambda_basic,
-        aws_iam_role_policy.std17_lambda_s3_put,      # ← 추가
+        aws_iam_role_policy_attachment.std17_lambda_xray,
+        aws_iam_role_policy.std17_lambda_s3_put,
         aws_cloudwatch_log_group.std17_lambda_logs,
     ]
 
-    tags = { Name = "${var.name_prefix}-log-saver" } # ← 추가
+    tags = { Name = "${var.name_prefix}-log-saver" }
 }
