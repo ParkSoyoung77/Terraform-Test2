@@ -50,10 +50,11 @@ docker run -d \
   -v /var/log/nginx:/var/log/nginx \
   nginx:stable
 
-# ── 5. Docker Compose 플러그인 (실패해도 계속 진행) ─────
+# ── 5. Docker Compose 플러그인 (FastAPI 기동에 필요) ─────
 DOCKER_PLUGIN_DIR="/usr/libexec/docker/cli-plugins"
 mkdir -p "$DOCKER_PLUGIN_DIR"
-curl -fSL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+curl -fSL --retry 5 --retry-delay 5 \
+  https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
   -o "$DOCKER_PLUGIN_DIR/docker-compose" \
   && chmod +x "$DOCKER_PLUGIN_DIR/docker-compose" \
   || echo "WARN: docker compose 설치 실패"
@@ -108,6 +109,11 @@ cat > /opt/aws/amazon-cloudwatch-agent/bin/config.json <<'EOF'
           {
             "file_path": "/var/log/nginx/error.log",
             "log_group_name": "std17-nginx-error",
+            "log_stream_name": "{instance_id}"
+          },
+          {
+            "file_path": "/app/logs/fastapi.log",
+            "log_group_name": "std17-fastapi-app",
             "log_stream_name": "{instance_id}"
           }
         ]

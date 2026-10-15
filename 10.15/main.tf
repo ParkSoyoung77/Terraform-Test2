@@ -74,6 +74,10 @@ module "compute" {
     key_name              = var.key_name
     alb_target_group_arn  = module.alb.target_group_arn
 
+    # FastAPI config.json 용
+    aws_region            = var.aws_region
+    lambda_function_name  = module.lambda.function_name
+
     # NAT 경로가 준비된 뒤 인스턴스가 떠야 docker 설치/이미지 pull 이 성공함
     depends_on = [module.nat_instance, module.network]
 }
@@ -154,4 +158,31 @@ module "flow_log" {
 module "storage" {
     source      = "./modules/storage"
     bucket_name = "std17-eu-west-2-log-bucket"
+}
+
+# ==================================================================
+# 12. Lambda (python3.14) - FastAPI 로그를 S3에 저장
+# ==================================================================
+module "lambda" {
+    source          = "./modules/lambda"
+    name_prefix     = var.name_prefix
+    log_bucket_name = module.storage.bucket_name
+    log_bucket_arn  = module.storage.bucket_arn
+}
+
+# ==================================================================
+# 13. EC2 역할 → Lambda 호출 권한 (루트 레벨: iam ↔ lambda 순환참조 회피)
+# ==================================================================
+resource "aws_iam_role_policy" "ec2_invoke_log_lambda" {
+    name = "${var.name_prefix}-ec2-invoke-log-lambda"
+    role = module.iam.ec2_role_name
+
+    policy = jsonencode({
+        Version = "2012-10-17"
+        Statement = [{
+            Effect   = "Allow"
+            Action   = "lambda:InvokeFunction"
+            Resource = module.lambda.function_arn
+        }]
+    })
 }

@@ -55,3 +55,13 @@ variable "alb_target_group_arn" {
     description = "ASG를 연결할 ALB 타겟그룹 ARN (alb 모듈의 target_group_arn)"
     type        = string
 }
+
+variable "aws_region" {
+    description = "FastAPI boto3 클라이언트 리전 (config.json에 기록)"
+    type        = string
+}
+
+variable "lambda_function_name" {
+    description = "FastAPI가 호출할 로그 저장 Lambda 이름"
+    type        = string
+}

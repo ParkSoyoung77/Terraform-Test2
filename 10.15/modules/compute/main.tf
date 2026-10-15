@@ -57,7 +57,11 @@ resource "aws_launch_template" "std17_nginx" {
         enabled = true
     }
 
-    user_data = filebase64("${path.module}/scripts/user_data.sh")
+    # CRLF(Windows 줄바꿈)로 저장된 파일이 섞여도 EC2에서 bash가 깨지지 않게 LF로 통일
+    user_data = base64encode(replace(join("\n", [
+        file("${path.module}/scripts/user_data.sh"),
+        local.fastapi_setup,
+    ]), "\r\n", "\n"))
 
     tag_specifications {
         resource_type = "instance"

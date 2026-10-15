@@ -60,3 +60,8 @@ output "kubeconfig_command" {
     description = "kubectl 연결 명령어"
     value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks.cluster_name}"
 }
+
+output "log_lambda_name" {
+    description = "FastAPI 로그 저장 Lambda"
+    value       = module.lambda.function_name
+}

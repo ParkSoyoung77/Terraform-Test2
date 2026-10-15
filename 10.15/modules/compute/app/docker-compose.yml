@@ -1,0 +1,15 @@
+services:
+  fastapi:
+    build: .
+    image: std17-fastapi:latest
+    container_name: std17-fastapi
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    # restart 정책은 두지 않음 → 재시작은 systemd(fastapi.service)가 담당
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
