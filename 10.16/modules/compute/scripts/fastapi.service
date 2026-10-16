@@ -1,0 +1,21 @@
+[Unit]
+Description=FastAPI Application (docker compose, /app bind mount)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+# docker-compose.yml 이 있는 위치 (.:/app → /app:/app)
+WorkingDirectory=/app
+# 남아있는 컨테이너 정리 후 포그라운드로 실행 (로그가 journald로 들어감)
+ExecStartPre=-/usr/bin/docker compose down
+ExecStart=/usr/bin/docker compose up
+ExecStop=/usr/bin/docker compose down
+Restart=always
+RestartSec=5
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

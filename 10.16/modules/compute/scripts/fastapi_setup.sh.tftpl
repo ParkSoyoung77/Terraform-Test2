@@ -1,0 +1,41 @@
+# ── 8. FastAPI (/app 바인드 마운트 + uvicorn --reload) ─────
+APP_DIR=/app
+mkdir -p "$APP_DIR/logs"
+
+cat > "$APP_DIR/main.py" <<'PYEOF'
+${main_py}
+PYEOF
+
+cat > "$APP_DIR/Dockerfile" <<'DFEOF'
+${dockerfile}
+DFEOF
+
+cat > "$APP_DIR/docker-compose.yml" <<'YMLEOF'
+${compose_yml}
+YMLEOF
+
+cat > "$APP_DIR/requirements.txt" <<'REQEOF'
+${requirements}
+REQEOF
+
+cat > "$APP_DIR/config.json" <<'CFGEOF'
+${config_json}
+CFGEOF
+
+chown -R ec2-user:ec2-user "$APP_DIR"
+
+if ! docker compose version; then
+  echo "ERROR: docker compose 플러그인 없음 - FastAPI 기동 실패"
+  exit 1
+fi
+docker buildx version   # 0.17 미만이면 아래 docker compose build 에서 실패
+
+# ── 9. 상시 서비스 등록 (/etc/systemd/system/fastapi.service) ──
+cat > /etc/systemd/system/fastapi.service <<'SVCEOF'
+${fastapi_service}
+SVCEOF
+
+cd "$APP_DIR"
+docker compose build            # 이미지 미리 빌드 (서비스 시작 시간 단축)
+systemctl daemon-reload
+systemctl enable --now fastapi.service

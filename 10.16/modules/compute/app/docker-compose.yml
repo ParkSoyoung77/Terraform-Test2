@@ -1,0 +1,40 @@
+services:
+  fastapi:
+    build: .
+    image: std17-fastapi-xray:latest
+    container_name: fastapi-xray-app
+    ports:
+      - "8000:8000"
+    environment:
+      - AWS_REGION=eu-west-2
+      - AWS_XRAY_DAEMON_ADDRESS=xray-daemon:2000
+      # 액세스 키 없음 → EC2 역할(IMDS) 자격증명 자동 사용
+    volumes:
+      - .:/app
+    # restart 정책은 두지 않음 → 재시작은 systemd(fastapi.service)가 담당
+    networks:
+      - xray-net
+    depends_on:
+      - xray-daemon
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # 사이드카: 지속적으로 사용할 때
+  xray-daemon:
+    image: amazon/aws-xray-daemon:latest
+    container_name: xray-daemon
+    ports:
+      - "2000:2000/udp"
+      - "2000:2000/tcp"
+    # -b/-t: 다른 컨테이너에서 접근하도록 모든 인터페이스에서 수신, -n: 리전
+    command: ["-b", "0.0.0.0:2000", "-t", "0.0.0.0:2000", "-n", "eu-west-2"]
+    # command: ["--local-mode"]
+    networks:
+      - xray-net
+
+networks:
+  xray-net:
+    driver: bridge
