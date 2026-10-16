@@ -193,3 +193,13 @@ resource "aws_iam_role_policy_attachment" "ec2_xray" {
     role       = module.iam.ec2_role_name
     policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
 }
+
+# ==================================================================
+# 15. CloudTrail (관리 이벤트 → S3 + CloudWatch Logs, SSE-KMS)
+# ==================================================================
+module "cloudtrail" {
+    source            = "./modules/cloudtrail"
+    trail_name        = "std17-security-audit-trail"
+    trail_bucket_name = module.storage.bucket_name
+    owner             = "std17"
+}
