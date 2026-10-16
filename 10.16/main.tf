@@ -203,3 +203,13 @@ module "cloudtrail" {
     trail_bucket_name = module.storage.bucket_name
     owner             = "std17"
 }
+
+# ==================================================================
+# 16. Athena (CloudTrail 로그 조회)
+# ==================================================================
+module "athena" {
+    source          = "./modules/athena"
+    name_prefix     = var.name_prefix
+    log_bucket_name = module.storage.bucket_name
+    aws_region      = var.aws_region
+}
